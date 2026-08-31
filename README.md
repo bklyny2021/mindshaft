@@ -21,6 +21,8 @@ Open the project in Godot 4.7 and press **Play**, or run:
 godot --path .
 ```
 
+> **Full install guide (with Bob):** see [INSTALL.md](INSTALL.md).
+
 ### Optional: run Bob's LLM brain
 Bob's chat works out of the box with scripted replies. To give him a real vision-driven brain, start the local bridge (needs Ollama + a vision model):
 ```
