@@ -15,6 +15,11 @@ You can mine and place blocks, gather resources, craft tools and armor, and expl
 - NPC villagers with homes and jobs that go inside and lock their doors at night
 - Save/load: the world (your built/mined blocks, position, health) persists between sessions
 
+## Saving
+- **Autosave:** your world (blocks, position, health) is saved to `user://mindshaft_save.json` every 15 seconds automatically.
+- **Save now:** press **Esc** → **Save Game** to save immediately.
+- **Load:** the main menu shows **Load Saved World** whenever a save exists — it restores your position, health, and everything you built/mined.
+
 ## Run
 Open the project in Godot 4.7 and press **Play**, or run:
 ```
@@ -34,6 +39,14 @@ python bob_server.py
 - **Left-click** mine / attack · **Right-click** place / use
 - **1–9 / scroll** select hotbar slot · **E** inventory & crafting
 - **Enter** chat (talk to Bob) · **Esc** release mouse / menu
+
+## Missing / planned features (roadmap)
+MindShaft is early — here's what's **not** in yet:
+- **Hostile mobs / monsters** — only passive animals exist (cow, pig, sheep, chicken). No zombies, creepers, or combat mobs spawn yet.
+- **Sound effects** — no audio currently.
+- **Combat depth** — you can hit animals with tools/swords (tiered damage), but there are no monsters to fight and limited death/loot flow.
+
+These are the next things on the list.
 
 ## License & credits
 - Game code adapted from **Godotcraft** (MIT) — https://github.com/Godot-Templates/Godotcraft

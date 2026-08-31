@@ -35,6 +35,7 @@ const MODE_CREATIVE: String = "creative"
 @onready var _seed_input: LineEdit = $UI/Center/Panel/VBox/MainButtons/SeedInput
 @onready var _mode_button: Button = $UI/Center/Panel/VBox/MainButtons/ModeButton
 @onready var _play_button: Button = $UI/Center/Panel/VBox/MainButtons/PlayButton
+@onready var _load_button: Button = $UI/Center/Panel/VBox/MainButtons/LoadButton
 @onready var _multiplayer_button: Button = $UI/Center/Panel/VBox/MainButtons/MultiplayerButton
 @onready var _quit_button: Button = $UI/Center/Panel/VBox/MainButtons/QuitButton
 @onready var _multiplayer_view: VBoxContainer = $UI/Center/Panel/VBox/MultiplayerView
@@ -64,9 +65,10 @@ func _ready() -> void:
 	_camera.position = Vector3(0.0, CAMERA_HEIGHT, ORBIT_RADIUS)
 	_multiplayer_manager = get_node("/root/MpManager") as MultiplayerManager
 	_setup_title_animation()
-	for button: Button in [
+	var buttons: Array = [
 		_mode_button,
 		_play_button,
+		_load_button,
 		_multiplayer_button,
 		_quit_button,
 		_host_button,
@@ -76,10 +78,15 @@ func _ready() -> void:
 		_host_cancel_button,
 		_connect_button,
 		_join_cancel_button,
-	]:
+	]
+	for button: Button in buttons:
 		_setup_button(button)
+	# Only offer "Load Saved World" if a save actually exists.
+	_load_button.visible = SaveManager.file_exists()
+	_load_button.disabled = not SaveManager.file_exists()
 	_mode_button.pressed.connect(_on_mode_pressed)
 	_play_button.pressed.connect(_on_play_pressed)
+	_load_button.pressed.connect(_on_load_pressed)
 	_multiplayer_button.pressed.connect(_on_show_multiplayer)
 	_host_button.pressed.connect(_on_host_pressed)
 	_join_button.pressed.connect(_on_show_join)
@@ -173,6 +180,15 @@ func _on_play_pressed() -> void:
 		_multiplayer_manager.leave_room()
 	_pending_multiplayer_action = ""
 	_selected_world_seed = _seed_from_text(_seed_input.text)
+	_start_game()
+
+
+func _on_load_pressed() -> void:
+	# Load a saved world: use the seed stored in the save so terrain matches,
+	# then start the game scene (SaveManager restores blocks, position, health).
+	var saved_seed: int = SaveManager.get_saved_seed()
+	if saved_seed >= 0:
+		_selected_world_seed = saved_seed
 	_start_game()
 
 

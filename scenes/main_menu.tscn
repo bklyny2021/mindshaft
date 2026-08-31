@@ -150,6 +150,12 @@ layout_mode = 2
 theme_override_font_sizes/font_size = 16
 text = "Play Single Player"
 
+[node name="LoadButton" type="Button" parent="UI/Center/Panel/VBox/MainButtons"]
+custom_minimum_size = Vector2(0, 46)
+layout_mode = 2
+theme_override_font_sizes/font_size = 16
+text = "Load Saved World"
+
 [node name="MultiplayerButton" type="Button" parent="UI/Center/Panel/VBox/MainButtons" unique_id=970360008]
 custom_minimum_size = Vector2(0, 46)
 layout_mode = 2

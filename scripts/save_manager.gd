@@ -12,6 +12,24 @@ extends Node
 const SAVE_PATH := "user://mindshaft_save.json"
 const AUTOSAVE_INTERVAL := 15.0   # seconds between autosaves
 
+## Static check used by the main menu to show/hide the "Load" button.
+static func file_exists() -> bool:
+	return FileAccess.file_exists(SAVE_PATH)
+
+## Read the world seed stored in the save (used by Load to regenerate the
+## same terrain). Returns -1 if there's no save / no seed.
+static func get_saved_seed() -> int:
+	if not FileAccess.file_exists(SAVE_PATH):
+		return -1
+	var f := FileAccess.open(SAVE_PATH, FileAccess.READ)
+	if f == null:
+		return -1
+	var data = JSON.parse_string(f.get_as_text())
+	f.close()
+	if data is Dictionary and data.has("seed"):
+		return int(data["seed"])
+	return -1
+
 var _autosave_timer := 0.0
 
 func _ready() -> void:

@@ -160,6 +160,7 @@ func _show_main() -> void:
         status.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
         _vbox.add_child(status)
 
+    _vbox.add_child(_make_button("Save Game", _on_save_game))
     _vbox.add_child(_make_button("Back to Game", _on_back_to_game))
     _vbox.add_child(_make_button("Create Multiplayer Room", _on_create_room))
     _vbox.add_child(_make_button("Join Multiplayer Room", _on_show_join_input))
@@ -222,6 +223,22 @@ func _show_status(message: String) -> void:
 
 func _on_back_to_game() -> void:
     close()
+
+
+func _show_save_status() -> void:
+    _view = VIEW_STATUS
+    _clear_vbox()
+    _vbox.add_child(_make_title("Game Saved", 22))
+    _vbox.add_child(_make_subtle("Your world (blocks, position, health) was saved.\nYou can quit anytime and come back."))
+    _vbox.add_child(_make_button("Back to Settings", _on_show_main))
+    _vbox.add_child(_make_button("Back to Game", _on_back_to_game))
+
+
+func _on_save_game() -> void:
+    var savers: Array = get_tree().get_nodes_in_group("save_manager")
+    if not savers.is_empty() and savers[0].has_method("save_game"):
+        savers[0].save_game()
+    _show_save_status()
 
 
 func _on_return_to_main_menu() -> void:
