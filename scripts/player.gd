@@ -6,7 +6,7 @@ extends CharacterBody3D
 
 const WALK_SPEED: float = 4.5
 const SPRINT_SPEED: float = 7.5
-const JUMP_VELOCITY: float = 7.75
+const JUMP_VELOCITY: float = 7.905  # 7.75 + 2%
 const GROUND_ACCEL: float = 12.0
 const AIR_ACCEL: float = 3.0
 const MOUSE_SENSITIVITY: float = 0.0025
@@ -28,6 +28,17 @@ const CROUCH_SPEED: float = 1.8
 const SPRINT_DOUBLE_TAP_WINDOW: float = 0.3
 const FLY_SPEED: float = 10.0
 const FLY_ACCEL: float = 8.0
+
+# --- Swimming ---
+const WATER_SURFACE_Y: float = 0.9      # matches the water plane's Y in main.tscn
+const WATER_GRAVITY: float = 3.0        # much lighter gravity underwater
+const WATER_BUOYANCY: float = 0.8       # gentle float; weak enough to sink when you stop
+const SWIM_UP_SPEED: float = 7.0        # how fast Space lifts you while swimming (strong enough to jump out)
+const SWIM_ACCEL: float = 6.0           # horizontal accel while swimming
+const MAX_BREATH: float = 15.0         # seconds of air before drowning
+const BREATH_DRAIN: float = 1.0         # air lost per second underwater
+const BREATH_REGEN: float = 3.0         # air regained per second at surface
+const DROWN_DAMAGE_INTERVAL: float = 3.0  # 1 damage every 3s when out of air
 const FLY_BOOST_MULT: float = 2.5  # Shift + forward while flying
 const FLY_DOUBLE_TAP_WINDOW: float = 0.3
 const STAND_PIVOT_Y: float = 1.6
@@ -115,6 +126,8 @@ var _crack_overlay: MeshInstance3D
 var _w_was_pressed: bool = false
 var _w_last_release_time: float = -10.0
 var _sprint_active: bool = false
+var _run_toggle: bool = false
+var _r3_was_pressed: bool = false
 var _crouching: bool = false
 var _flying: bool = false
 var _creative_mode: bool = false
@@ -140,6 +153,8 @@ var _current_crack_stage: int = -1
 var _health: int = MAX_HEALTH
 var _was_on_floor: bool = true
 var _fall_start_y: float = 0.0
+var _breath: float = MAX_BREATH
+var _drown_timer: float = 0.0
 
 var _character_rest_position: Vector3 = Vector3.ZERO
 var _head_rest_position: Vector3 = Vector3.ZERO
@@ -165,9 +180,10 @@ func _ready() -> void:
             _crack_overlay = _block_highlight.get_node_or_null("CrackOverlay")
     if world_path != NodePath(""):
         _world = get_node_or_null(world_path)
-    if _world != null and _world.has_method("get_spawn_height"):
-        var h: int = _world.get_spawn_height()
-        global_position = Vector3(0.0, float(h) + 2.0, 0.0)
+    # Defer the actual spawn: wait until the world's collision is ready at the
+    # chosen spot, then verify it's safe, THEN place the player. This guarantees
+    # the player never spawns inside solid ground (chunks weren't ready before).
+    _start_deferred_spawn()
     var managers: Array = get_tree().get_nodes_in_group("multiplayer_manager")
     if not managers.is_empty():
         _multiplayer_mgr = managers[0]
@@ -284,10 +300,31 @@ func _unhandled_input(event: InputEvent) -> void:
 
 
 func _physics_process(delta: float) -> void:
+    # In-water state: based on the HEAD (camera) height, not the feet, so breath
+    # only drains when your head is actually underwater — not just your feet.
+    var head_y: float = global_position.y + STAND_PIVOT_Y
+    var in_water: bool = head_y < WATER_SURFACE_Y
+
     # Always apply gravity, even when input is locked (inventory open, mouse free).
-    # Fly mode ignores gravity entirely.
+    # Fly mode ignores gravity entirely. In water, gravity is HALVED (you feel
+    # lighter), and you control depth by LOOKING: look down to dive, look up to
+    # rise, Space to swim up fast.
     if not _flying and not is_on_floor():
-        velocity.y -= ProjectSettings.get_setting("physics/3d/default_gravity", 9.8) * delta
+        if in_water:
+            var half_gravity: float = ProjectSettings.get_setting("physics/3d/default_gravity", 9.8) * 0.5
+            if Input.is_physical_key_pressed(KEY_SPACE):
+                velocity.y = SWIM_UP_SPEED   # swim up fast
+            elif _pitch < -0.3:
+                velocity.y = -SWIM_UP_SPEED  # looking down = dive
+            elif _pitch > 0.3:
+                velocity.y = SWIM_UP_SPEED * 0.6  # looking up = rise
+            else:
+                velocity.y -= half_gravity * delta  # level = half gravity (lighter)
+        else:
+            velocity.y -= ProjectSettings.get_setting("physics/3d/default_gravity", 9.8) * delta
+
+    # Breath: drain underwater, regen at surface, drown when empty.
+    _update_breath(delta, in_water)
 
     var input_locked: bool = Input.mouse_mode != Input.MOUSE_MODE_CAPTURED
     if input_locked:
@@ -315,6 +352,12 @@ func _physics_process(delta: float) -> void:
             _w_last_release_time = now
         _sprint_active = false
     _w_was_pressed = w_now
+
+    # --- Right stick click (R3) toggles run ---
+    var r3_now: bool = Input.is_joy_button_pressed(0, JOY_BUTTON_RIGHT_STICK)
+    if r3_now and not _r3_was_pressed:
+        _run_toggle = not _run_toggle
+    _r3_was_pressed = r3_now
 
     # --- Double-tap Space → toggle fly mode (creative only) ---
     var space_now: bool = Input.is_physical_key_pressed(KEY_SPACE)
@@ -347,11 +390,26 @@ func _physics_process(delta: float) -> void:
         clamp(CROUCH_LERP_RATE * delta, 0.0, 1.0)
     )
 
-    # Jump (disabled while crouching for true sneak).
-    if not _crouching and Input.is_physical_key_pressed(KEY_SPACE) and is_on_floor():
-        velocity.y = JUMP_VELOCITY
+    # Jump (disabled while crouching for true sneak). In water, Space swims you up.
+    # Xbox: A button = jump/swim.
+    var jump_pressed: bool = Input.is_physical_key_pressed(KEY_SPACE) or Input.is_joy_button_pressed(0, JOY_BUTTON_A)
+    if jump_pressed:
+        if in_water:
+            velocity.y = SWIM_UP_SPEED
+        elif not _crouching and is_on_floor():
+            velocity.y = JUMP_VELOCITY
 
-    # Movement input.
+    # Right stick: look around (works alongside mouse).
+    var look_x: float = Input.get_joy_axis(0, JOY_AXIS_RIGHT_X)
+    var look_y: float = Input.get_joy_axis(0, JOY_AXIS_RIGHT_Y)
+    if absf(look_x) > 0.15 or absf(look_y) > 0.15:
+        _yaw -= look_x * MOUSE_SENSITIVITY * 14.0
+        _pitch -= look_y * MOUSE_SENSITIVITY * 14.0
+        _pitch = clamp(_pitch, -PITCH_LIMIT, PITCH_LIMIT)
+        rotation.y = _yaw
+        camera_pivot.rotation.x = _pitch
+
+    # Movement input (keyboard + Xbox controller left stick).
     var ix: float = 0.0
     var iz: float = 0.0
     if Input.is_physical_key_pressed(KEY_D):
@@ -362,12 +420,21 @@ func _physics_process(delta: float) -> void:
         iz += 1.0
     if w_now:
         iz -= 1.0
+    # Left stick: X = strafe, Y = forward/back (Y is inverted on sticks).
+    var stick_x: float = Input.get_joy_axis(0, JOY_AXIS_LEFT_X)
+    var stick_y: float = Input.get_joy_axis(0, JOY_AXIS_LEFT_Y)
+    if absf(stick_x) > 0.2:
+        ix += stick_x
+    if absf(stick_y) > 0.2:
+        iz += stick_y
     var wish_dir: Vector3 = (transform.basis * Vector3(ix, 0.0, iz)).normalized()
 
     var target_speed: float = WALK_SPEED
     if _crouching:
         target_speed = CROUCH_SPEED
     elif _sprint_active and w_now:
+        target_speed = SPRINT_SPEED
+    elif _run_toggle:
         target_speed = SPRINT_SPEED
 
     var accel: float = GROUND_ACCEL if is_on_floor() else AIR_ACCEL
@@ -412,6 +479,22 @@ func _update_fall_damage() -> void:
     _was_on_floor = on_floor
 
 
+func _update_breath(delta: float, in_water: bool) -> void:
+    if in_water:
+        _breath -= BREATH_DRAIN * delta
+        if _breath <= 0.0:
+            _breath = 0.0
+            _drown_timer += delta
+            if _drown_timer >= DROWN_DAMAGE_INTERVAL:
+                _drown_timer = 0.0
+                take_damage(1)
+    else:
+        _breath = minf(_breath + BREATH_REGEN * delta, MAX_BREATH)
+        _drown_timer = 0.0
+    if _hud != null and _hud.has_method("set_breath"):
+        _hud.set_breath(_breath / MAX_BREATH)
+
+
 func take_damage(amount: int = 1) -> void:
     if _health <= 0:
         return
@@ -441,13 +524,79 @@ func _sync_health_to_hud() -> void:
 
 
 func _die() -> void:
-    # Respawn at world spawn with full health.
-    if _world != null and _world.has_method("get_spawn_height"):
+    # Show the death menu instead of auto-respawning — the player chooses where.
+    velocity = Vector3.ZERO
+    var menus: Array = get_tree().get_nodes_in_group("settings_menu")
+    if not menus.is_empty() and menus[0].has_method("show_death"):
+        menus[0].show_death()
+
+
+## Respawn at a random surface location with full health (called from the death menu).
+func respawn() -> void:
+    if _world != null and _world.has_method("get_surface_y"):
+        var rng: RandomNumberGenerator = RandomNumberGenerator.new()
+        rng.randomize()
+        var sx: int = rng.randi_range(-20, 20)
+        var sz: int = rng.randi_range(-20, 20)
+        var surface_y: int = _world.get_surface_y(sx, sz)
+        global_position = Vector3(float(sx) + 0.5, float(surface_y) + 1.0, float(sz) + 0.5)
+    elif _world != null and _world.has_method("get_spawn_height"):
         var h: int = _world.get_spawn_height()
         global_position = Vector3(0.0, float(h) + 2.0, 0.0)
     velocity = Vector3.ZERO
     _health = MAX_HEALTH
     _sync_health_to_hud()
+
+
+## Deferred spawn: poll until the world's collision is ready at the chosen spot,
+## then verify the position is safe (not inside a solid block) before placing
+## the player. This guarantees the player never spawns stuck underground.
+func _start_deferred_spawn() -> void:
+    if _world == null:
+        return
+    # Pick a random surface target now.
+    var rng: RandomNumberGenerator = RandomNumberGenerator.new()
+    rng.randomize()
+    var sx: int = rng.randi_range(-20, 20)
+    var sz: int = rng.randi_range(-20, 20)
+    var target: Vector3 = Vector3(float(sx) + 0.5, 64.0, float(sz) + 0.5)
+    if _world.has_method("get_surface_y"):
+        target.y = float(_world.get_surface_y(sx, sz)) + 1.0
+    # Poll every 0.1s until the chunk at the target is collision-ready.
+    var tween: Tween = create_tween()
+    tween.tween_interval(0.1)
+    tween.tween_callback(func() -> void:
+        if _world == null or not is_instance_valid(_world):
+            return
+        if _world.has_method("is_collision_ready_at") and not _world.is_collision_ready_at(target):
+            # Not ready yet — keep waiting.
+            _start_deferred_spawn()
+            return
+        # Ready: verify the spot is safe, then place the player.
+        if _world.has_method("has_block"):
+            var feet: Vector3i = Vector3i(floori(target.x), floori(target.y), floori(target.z))
+            var head: Vector3i = Vector3i(feet.x, feet.y + 1, feet.z)
+            if _world.has_block(feet) or _world.has_block(head):
+                # Buried — pick a fresh random spot and retry.
+                _start_deferred_spawn()
+                return
+        global_position = target
+        velocity = Vector3.ZERO
+    )
+
+
+## Post-load safety net: if the player is stuck inside a solid block (chunks
+## weren't ready at spawn), teleport them to the surface.
+func _verify_spawn_safe() -> void:
+    if _world == null or not _world.has_method("has_block"):
+        return
+    var feet: Vector3i = Vector3i(floori(global_position.x), floori(global_position.y), floori(global_position.z))
+    var head: Vector3i = Vector3i(feet.x, feet.y + 1, feet.z)
+    if _world.has_block(feet) or _world.has_block(head):
+        # Stuck inside a block — move to the surface.
+        if _world.has_method("get_surface_y"):
+            var surface_y: int = _world.get_surface_y(feet.x, feet.z)
+            global_position = Vector3(global_position.x, float(surface_y) + 1.0, global_position.z)
 
 
 func _process_fly_movement(delta: float, space_now: bool) -> void:
@@ -719,7 +868,7 @@ func _update_mining(delta: float) -> void:
         return
     var mining_held: bool = (
         Input.mouse_mode == Input.MOUSE_MODE_CAPTURED
-        and Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT)
+        and (Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT) or Input.get_joy_axis(0, JOY_AXIS_TRIGGER_RIGHT) > 0.5)
     )
     if not mining_held:
         _stop_mining()
@@ -872,6 +1021,84 @@ func _on_selection_changed(_slot: int, type: String) -> void:
     mat.texture_filter = BaseMaterial3D.TEXTURE_FILTER_NEAREST
     held_block.set_surface_override_material(0, mat)
     held_block.visible = true
+    _shape_held_item(type, mat)
+
+
+## Rebuild the held item's mesh so tools/weapons look like the real thing
+## (a sword is a blade + handle, not a cube with a sword picture on it).
+func _shape_held_item(type: String, mat: StandardMaterial3D) -> void:
+    # Remove any previously-built tool parts.
+    for child in held_block.get_children():
+        child.queue_free()
+    var is_tool: bool = type.ends_with("_sword") or type.ends_with("_pickaxe") or type.ends_with("_axe")
+    if not is_tool:
+        return  # blocks keep the plain cube
+    # Blade / head color: tint by material tier.
+    var blade_color: Color = Color(0.75, 0.75, 0.78)  # default (stone-ish)
+    if type.begins_with("wood"):
+        blade_color = Color(0.55, 0.4, 0.25)
+    elif type.begins_with("iron"):
+        blade_color = Color(0.85, 0.87, 0.9)
+    var blade_mat: StandardMaterial3D = StandardMaterial3D.new()
+    blade_mat.albedo_color = blade_color
+    blade_mat.roughness = 0.4
+    var handle_mat: StandardMaterial3D = StandardMaterial3D.new()
+    handle_mat.albedo_color = Color(0.45, 0.3, 0.15)
+    handle_mat.roughness = 0.8
+
+    if type.ends_with("_sword"):
+        # Blade: thin flat box pointing forward.
+        var blade: MeshInstance3D = MeshInstance3D.new()
+        var bm: BoxMesh = BoxMesh.new()
+        bm.size = Vector3(0.06, 0.06, 0.5)
+        bm.material = blade_mat
+        blade.mesh = bm
+        blade.position = Vector3(0, 0, -0.3)
+        held_block.add_child(blade)
+        # Handle: short box behind the blade.
+        var handle: MeshInstance3D = MeshInstance3D.new()
+        var hm: BoxMesh = BoxMesh.new()
+        hm.size = Vector3(0.05, 0.05, 0.18)
+        hm.material = handle_mat
+        handle.mesh = hm
+        handle.position = Vector3(0, 0, 0.1)
+        held_block.add_child(handle)
+    elif type.ends_with("_pickaxe"):
+        # Handle: diagonal stick.
+        var handle: MeshInstance3D = MeshInstance3D.new()
+        var hm: BoxMesh = BoxMesh.new()
+        hm.size = Vector3(0.05, 0.05, 0.4)
+        hm.material = handle_mat
+        handle.mesh = hm
+        handle.rotation.x = 0.5
+        handle.position = Vector3(0, 0, -0.1)
+        held_block.add_child(handle)
+        # Head: horizontal bar at the top.
+        var head: MeshInstance3D = MeshInstance3D.new()
+        var hdm: BoxMesh = BoxMesh.new()
+        hdm.size = Vector3(0.3, 0.06, 0.06)
+        hdm.material = blade_mat
+        head.mesh = hdm
+        head.position = Vector3(0, 0.2, -0.15)
+        held_block.add_child(head)
+    elif type.ends_with("_axe"):
+        # Handle: diagonal stick.
+        var handle: MeshInstance3D = MeshInstance3D.new()
+        var hm: BoxMesh = BoxMesh.new()
+        hm.size = Vector3(0.05, 0.05, 0.4)
+        hm.material = handle_mat
+        handle.mesh = hm
+        handle.rotation.x = 0.5
+        handle.position = Vector3(0, 0, -0.1)
+        held_block.add_child(handle)
+        # Blade: flat wedge at the top.
+        var blade: MeshInstance3D = MeshInstance3D.new()
+        var bm: BoxMesh = BoxMesh.new()
+        bm.size = Vector3(0.22, 0.1, 0.05)
+        bm.material = blade_mat
+        blade.mesh = bm
+        blade.position = Vector3(0, 0.2, -0.12)
+        held_block.add_child(blade)
 
 
 func _texture_for(type: String) -> Texture2D:

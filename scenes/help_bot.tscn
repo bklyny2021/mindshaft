@@ -3,7 +3,7 @@
 [ext_resource type="Script" path="res://scripts/help_bot.gd" id="1_bot"]
 
 [sub_resource type="BoxShape3D" id="BobCollider"]
-size = Vector3(0.7, 1.6, 0.7)
+size = Vector3(0.7, 2.0, 0.7)
 
 [sub_resource type="StandardMaterial3D" id="BodyMat"]
 resource_local_to_scene = true
@@ -39,7 +39,7 @@ size = Vector3(0.2, 0.5, 0.2)
 script = ExtResource("1_bot")
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.8, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.0, 0)
 shape = SubResource("BobCollider")
 
 [node name="Model" type="Node3D" parent="."]

@@ -1,8 +1,12 @@
-# MindShaft
+# MindShaft Space Sandbox
 
-**MindShaft 0.2.2** — a Minecraft-style voxel survival sandbox for desktop, built in **Godot 4.7**, with an **LLM-powered helper bot**.
+**MindShaft Space Sandbox** — a Minecraft-style voxel survival sandbox for desktop, built in **Godot 4.7**, with an **LLM-powered helper bot**.
 
 You can mine and place blocks, gather resources, craft tools and armor, and explore a procedurally generated world with day/night, weather, animals, and NPC villagers. Your companion **Bob** — a local LLM-driven helper — follows you, helps you mine, sees the world through his own first-person camera, and chats with you in-game.
+
+## Why this game exists
+
+This game was made just to see if I could do it. I made this from scratch — all the features were made just as a test to myself to create my first game. Now I'm gonna create many. This is just number 1. I had to start somewhere, and I thought Minecraft would be an easy start. Now on to bigger things. Enjoy my game with a full LLM AI as your helper.
 
 ## Features
 - First-person (R toggles third-person) block mining & placing with mining-crack feedback

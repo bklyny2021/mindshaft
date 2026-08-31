@@ -8,6 +8,16 @@
 [ext_resource type="Texture2D" uid="uid://c68jqejpadxsx" path="res://assets/generated/wood_frame_0.png" id="6_wood"]
 [ext_resource type="Texture2D" uid="uid://co3fxxf1ehitk" path="res://assets/generated/leaves_frame_0.png" id="7_leaves"]
 [ext_resource type="Texture2D" uid="uid://5ybo7vdslnm1" path="res://assets/generated/sand_frame_0.png" id="8_sand"]
+[ext_resource type="Shader" path="res://shaders/water.gdshader" id="33_water_shader"]
+
+[sub_resource type="PlaneMesh" id="PlaneMesh_water"]
+size = Vector2(2000, 2000)
+subdivide_width = 80
+subdivide_depth = 80
+orientation = 1
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_water"]
+shader = ExtResource("33_water_shader")
 
 [sub_resource type="ProceduralSkyMaterial" id="SkyMat_1"]
 sky_top_color = Color(0.06, 0.05, 0.22, 1)

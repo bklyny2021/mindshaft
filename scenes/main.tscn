@@ -13,6 +13,7 @@
 [ext_resource type="Texture2D" uid="uid://c68jqejpadxsx" path="res://assets/generated/wood_frame_0.png" id="11_wood"]
 [ext_resource type="Texture2D" uid="uid://co3fxxf1ehitk" path="res://assets/generated/leaves_frame_0.png" id="12_leaves"]
 [ext_resource type="Texture2D" uid="uid://5ybo7vdslnm1" path="res://assets/generated/sand_frame_0.png" id="13_sand"]
+[ext_resource type="Shader" path="res://shaders/water.gdshader" id="33_water_shader"]
 [ext_resource type="Script" uid="uid://bkhsk2cy403ss" path="res://scripts/day_night_cycle.gd" id="14_daynight"]
 [ext_resource type="Script" path="res://scripts/chat_bridge.gd" id="23_chat"]
 [ext_resource type="PackedScene" path="res://scenes/help_bot.tscn" id="24_bob"]
@@ -49,13 +50,22 @@ tonemap_mode = 2
 glow_enabled = true
 glow_intensity = 0.55
 glow_bloom = 0.18
-fog_enabled = true
+fog_enabled = false
 fog_light_color = Color(0.42, 0.38, 0.78, 1)
 fog_light_energy = 1.1
 fog_sun_scatter = 0.15
 fog_density = 0.016
 fog_aerial_perspective = 0.5
 fog_sky_affect = 0.4
+
+[sub_resource type="PlaneMesh" id="PlaneMesh_water"]
+size = Vector2(2000, 2000)
+subdivide_width = 80
+subdivide_depth = 80
+orientation = 1
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_water"]
+shader = ExtResource("33_water_shader")
 
 [sub_resource type="CapsuleShape3D" id="CapsuleShape3D_1"]
 radius = 0.35
@@ -118,6 +128,13 @@ cobble_texture = ExtResource("4_cobble")
 wood_texture = ExtResource("11_wood")
 leaves_texture = ExtResource("12_leaves")
 sand_texture = ExtResource("13_sand")
+
+[node name="Water" type="MeshInstance3D" parent="."]
+unique_name_in_owner = true
+cast_shadow = 0
+mesh = SubResource("PlaneMesh_water")
+surface_material_override/0 = SubResource("ShaderMaterial_water")
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.9, 0)
 
 [node name="Player" type="CharacterBody3D" parent="." unique_id=33696559]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 30, 0)

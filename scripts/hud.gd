@@ -101,6 +101,7 @@ var crafting_table_texture: Texture2D = load("res://assets/generated/crafting_ta
 var feather_texture: Texture2D = load("res://assets/generated/feather_frame_0.png")
 var heart_full_texture: Texture2D = load("res://assets/generated/heart_full_frame_0.png")
 var heart_empty_texture: Texture2D = load("res://assets/generated/heart_empty_frame_0.png")
+var bubble_texture: Texture2D = load("res://assets/generated/bubble_frame_0.png")
 
 # Tool / weapon / armor textures (CC-BY ProgrammerArt pack — free to use w/ credit)
 var stick_texture: Texture2D = load("res://assets/generated/stick_frame_0.png")
@@ -122,6 +123,7 @@ var iron_boots_texture: Texture2D = load("res://assets/generated/iron_boots_fram
 
 @onready var hotbar: HBoxContainer = $Hotbar
 @onready var health_bar: HBoxContainer = $HealthBar
+@onready var breath_bar: HBoxContainer = $BreathBar
 @onready var inventory: PanelContainer = $Inventory
 @onready var inv_grid: GridContainer = $Inventory/InvContent/InvGrid
 
@@ -133,6 +135,10 @@ var _cursor_preview: Control
 var _creative_mode: bool = false
 var _heart_icons: Array[TextureRect] = []
 var _health: int = MAX_HEARTS    # 1 heart == 1 health point, out of MAX_HEARTS
+var _bubble_icons: Array[TextureRect] = []
+var _breath_ratio: float = 1.0
+var _breath_visible: bool = false
+const BREATH_BUBBLES: int = 10
 
 
 func _enter_tree() -> void:
@@ -146,6 +152,7 @@ func _ready() -> void:
     _slot_panels.resize(TOTAL_SLOTS)
     _build_hotbar()
     _build_health_bar()
+    _build_breath_bar()
     _build_crafting_section()
     _build_inventory_grid()
     _style_inventory_panel()
@@ -273,6 +280,44 @@ func _build_health_bar() -> void:
 func _refresh_hearts() -> void:
     for i in _heart_icons.size():
         _heart_icons[i].texture = heart_full_texture if i < _health else heart_empty_texture
+
+
+func _build_breath_bar() -> void:
+    for i in BREATH_BUBBLES:
+        var b: TextureRect = TextureRect.new()
+        b.custom_minimum_size = Vector2(14, 14)
+        b.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+        b.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+        b.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+        b.mouse_filter = Control.MOUSE_FILTER_IGNORE
+        b.texture = bubble_texture
+        breath_bar.add_child(b)
+        _bubble_icons.append(b)
+    _refresh_bubbles()
+
+
+func _refresh_bubbles() -> void:
+    var filled: int = int(round(_breath_ratio * BREATH_BUBBLES))
+    for i in _bubble_icons.size():
+        var b: TextureRect = _bubble_icons[i]
+        b.modulate = Color(1, 1, 1, 1) if i < filled else Color(1, 1, 1, 0.15)
+
+
+## Called by the player each frame with breath ratio (0..1). Shows the bar
+## while underwater and fades it out after you surface.
+func set_breath(ratio: float) -> void:
+    _breath_ratio = clampf(ratio, 0.0, 1.0)
+    _refresh_bubbles()
+    if ratio < 1.0:
+        _breath_visible = true
+        breath_bar.visible = true
+        breath_bar.modulate.a = lerp(breath_bar.modulate.a, 1.0, 0.2)
+    else:
+        # Fade out after leaving the water.
+        breath_bar.modulate.a = lerp(breath_bar.modulate.a, 0.0, 0.1)
+        if breath_bar.modulate.a < 0.02:
+            breath_bar.visible = false
+            _breath_visible = false
 
 
 func _build_crafting_section() -> void:

@@ -110,16 +110,30 @@ func load_game() -> bool:
 	if world.has_method("apply_block_snapshot") and data.has("edits"):
 		world.apply_block_snapshot(data["edits"])
 
-	# Restore player position and health.
+	# Restore player health only. Position is NOT restored — the player always
+	# spawns at a fresh random surface location (never the same buried spot).
 	var player: Node = _get_player()
 	if player != null:
-		if data.has("player_pos"):
-			var pp: Dictionary = data["player_pos"]
-			player.global_position = Vector3(
-				float(pp.get("x", 0.0)),
-				float(pp.get("y", 64.0)),
-				float(pp.get("z", 0.0))
-			)
 		if data.has("player_health") and player.has_method("set_health"):
 			player.set_health(int(data["player_health"]))
 	return true
+
+
+## True when the player can stand at this position without being inside a solid
+## block (feet in air, not buried in rock).
+func _is_safe_position(world: Node, pos: Vector3) -> bool:
+	if world == null or not world.has_method("has_block"):
+		return true
+	var feet: Vector3i = Vector3i(floori(pos.x), floori(pos.y), floori(pos.z))
+	var head: Vector3i = Vector3i(feet.x, feet.y + 1, feet.z)
+	return not world.has_block(feet) and not world.has_block(head)
+
+
+## Find a safe surface position near the saved spot (fall back to world origin).
+func _safe_surface_position(world: Node, pos: Vector3) -> Vector3:
+	if world != null and world.has_method("get_surface_y"):
+		var x: int = floori(pos.x)
+		var z: int = floori(pos.z)
+		var surface_y: int = world.get_surface_y(x, z)
+		return Vector3(pos.x, float(surface_y) + 1.0, pos.z)
+	return Vector3(pos.x, 64.0, pos.z)

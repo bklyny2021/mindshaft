@@ -19,6 +19,7 @@ const VIEW_MAIN: String = "main"
 const VIEW_CODE: String = "code"
 const VIEW_JOIN: String = "join"
 const VIEW_STATUS: String = "status"
+const VIEW_DEATH: String = "death"
 
 var _overlay: ColorRect
 var _panel: PanelContainer
@@ -33,6 +34,8 @@ var _pending_action: String = ""
 
 func _enter_tree() -> void:
     add_to_group("settings_menu")
+    # Keep the menu responsive while the game is paused.
+    process_mode = Node.PROCESS_MODE_ALWAYS
 
 
 func _ready() -> void:
@@ -61,6 +64,8 @@ func open() -> void:
     visible = true
     Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
     _show_main()
+    # Pause the game while the menu is open.
+    get_tree().paused = true
     opened.emit()
 
 
@@ -70,6 +75,8 @@ func close() -> void:
     _is_open = false
     visible = false
     Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
+    # Resume the game.
+    get_tree().paused = false
     closed.emit()
 
 
@@ -149,7 +156,6 @@ func _show_main() -> void:
     _view = VIEW_MAIN
     _clear_vbox()
     _vbox.add_child(_make_title("Settings"))
-
     if _multiplayer_mgr != null and _multiplayer_mgr.is_active():
         var code: String = _multiplayer_mgr.get_room_code()
         var status_text: String = "In room: %s" % code if code != "" else "Connected"
@@ -171,12 +177,35 @@ func _show_main() -> void:
     _vbox.add_child(_make_button("Return to Main Menu", _on_return_to_main_menu))
 
 
+## Show the death screen: pause the game and let the player choose where to
+## respawn. House/bed options appear once those systems exist; for now offer
+## "Respawn" (random surface) and "Return to Main Menu".
+func show_death() -> void:
+    _is_open = true
+    visible = true
+    _view = VIEW_DEATH
+    _clear_vbox()
+    _vbox.add_child(_make_title("You Died"))
+    _vbox.add_child(_make_subtle("Choose where to respawn:"))
+    _vbox.add_child(_make_button("Respawn", _on_respawn))
+    _vbox.add_child(_make_button("Return to Main Menu", _on_return_to_main_menu))
+    Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+    get_tree().paused = true
+
+
+func _on_respawn() -> void:
+    # Respawn the player at a random surface location, then close the menu.
+    var players: Array = get_tree().get_nodes_in_group("player")
+    if not players.is_empty() and players[0].has_method("respawn"):
+        players[0].respawn()
+    close()
+
+
 func _show_code(code: String) -> void:
     _view = VIEW_CODE
     _clear_vbox()
     _vbox.add_child(_make_title("Room Created"))
     _vbox.add_child(_make_subtle("Share this 4-digit code with friends:"))
-
     var code_label: Label = Label.new()
     code_label.text = code
     code_label.add_theme_font_size_override("font_size", 56)
