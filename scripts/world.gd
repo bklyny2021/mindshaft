@@ -71,9 +71,12 @@ const TYPE_COBBLE: String = "cobble"
 const TYPE_WOOD: String = "wood"
 const TYPE_LEAVES: String = "leaves"
 const TYPE_SAND: String = "sand"
+const TYPE_PLANKS: String = "planks"
+const TYPE_CRAFTING_TABLE: String = "crafting_table"
 
 const ALL_BODY_TYPES: Array = [
     TYPE_DIRT, TYPE_GRASS, TYPE_COBBLE, TYPE_WOOD, TYPE_LEAVES, TYPE_SAND,
+    TYPE_PLANKS, TYPE_CRAFTING_TABLE,
 ]
 const CHUNK_NEIGHBOR_DIRS: Array[Vector2i] = [
     Vector2i.RIGHT, Vector2i.LEFT, Vector2i.UP, Vector2i.DOWN,
@@ -86,6 +89,8 @@ const CHUNK_NEIGHBOR_DIRS: Array[Vector2i] = [
 @export var wood_texture: Texture2D
 @export var leaves_texture: Texture2D
 @export var sand_texture: Texture2D
+@export var planks_texture: Texture2D
+@export var crafting_table_texture: Texture2D
 
 var _collision_body: StaticBody3D
 var _materials: Dictionary = {}  # render key → StandardMaterial3D
@@ -1169,6 +1174,10 @@ func _texture_for_render_key(type: String) -> Texture2D:
             return leaves_texture
         TYPE_SAND:
             return sand_texture
+        TYPE_PLANKS:
+            return planks_texture
+        TYPE_CRAFTING_TABLE:
+            return crafting_table_texture
     return null
 
 

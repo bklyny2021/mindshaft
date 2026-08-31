@@ -15,6 +15,9 @@ const MID_SIM_INTERVAL: float = AnimalLodPolicy.MID_SIM_INTERVAL
 @export var max_health: int = 5
 @export_range(0.0, 1.0) var idle_chance: float = 0.3
 @export var walk_cycle_speed: float = 7.0
+@export var loot_type: String = "beef_raw"
+@export var loot_count_min: int = 1
+@export var loot_count_max: int = 2
 
 var _wander_dir: Vector3 = Vector3.ZERO
 var _wander_time_left: float = 0.0
@@ -138,8 +141,30 @@ func take_damage(amount: int = 1) -> void:
 	velocity.x = away.x * KNOCKBACK_SPEED
 	velocity.z = away.z * KNOCKBACK_SPEED
 	if _health <= 0:
-		_dead = true
-		queue_free()
+		_die()
+
+
+func _die() -> void:
+	if _dead:
+		return
+	_dead = true
+	# Drop loot (meat) so the player can gather food from livestock.
+	var count: int = randi_range(loot_count_min, loot_count_max)
+	for i in count:
+		var drop: ItemDrop = ItemDrop.new()
+		drop.block_type = loot_type
+		drop.block_texture = _loot_texture()
+		var parent: Node = get_tree().current_scene if get_tree().current_scene != null else get_parent()
+		parent.add_child(drop)
+		drop.global_position = global_position + Vector3(randf_range(-0.4, 0.4), 0.6, randf_range(-0.4, 0.4))
+	queue_free()
+
+
+func _loot_texture() -> Texture2D:
+	var path: String = "res://assets/generated/%s_frame_0.png" % loot_type
+	if ResourceLoader.exists(path):
+		return load(path)
+	return null
 
 
 func _cache_model_materials() -> void:

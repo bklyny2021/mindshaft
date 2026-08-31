@@ -140,6 +140,18 @@ func _physics_process(delta: float) -> void:
 	velocity.x = lerp(velocity.x, target_vel.x, clamp(MOVE_ACCEL * delta, 0.0, 1.0))
 	velocity.z = lerp(velocity.z, target_vel.z, clamp(MOVE_ACCEL * delta, 0.0, 1.0))
 
+	# --- Stuck detection: wants to move but isn't getting anywhere. ---
+	var wants_to_move: bool = move_dir.length() > 0.1
+	var actually_moving: bool = Vector2(velocity.x, velocity.z).length() > 0.3
+	if wants_to_move and not actually_moving and is_on_floor():
+		_stuck_time += delta
+		if _stuck_time > 2.0 and _stuck_time - delta <= 2.0:
+			# Just crossed the threshold — tell the player once.
+			if _bridge != null and _bridge.has_method("post_bob_message"):
+				_bridge.post_bob_message("I'm stuck! Can you help me? (coords %.1f, %.1f, %.1f)" % [global_position.x, global_position.y, global_position.z])
+	else:
+		_stuck_time = 0.0
+
 	# --- Jump to clear a wall/block (and clear 1-high ledges) ---
 	if is_on_wall() and is_on_floor() and velocity.length() > 0.5:
 		velocity.y = JUMP_VELOCITY
@@ -150,6 +162,11 @@ func _physics_process(delta: float) -> void:
 		if not _ground_ahead(global_position, 1.4, 3.0):
 			# Ground is missing just ahead — steer sideways instead of falling.
 			move_dir = Vector3(move_dir.z, 0.0, -move_dir.x)
+
+	# --- Obstacle avoidance: steer around walls/blocks in the way. ---
+	if is_on_floor() and move_dir.length() > 0.1 and _obstacle_ahead(1.2):
+		# Something solid is in front — turn sideways to go around it.
+		move_dir = Vector3(move_dir.z, 0.0, -move_dir.x)
 
 	# --- Fall damage: record start, and damage on landing past a safe height. ---
 	if not is_on_floor():
@@ -238,10 +255,28 @@ func _ground_ahead(pos: Vector3, dist: float, look_down: float) -> bool:
 	var hit := space.intersect_ray(q)
 	return not hit.is_empty()
 
+
+## True if a solid block is directly in front of Bob at chest height (a wall or
+## obstacle he can't just walk through). Used to steer around things.
+func _obstacle_ahead(dist: float) -> bool:
+	var space := get_world_3d().direct_space_state
+	var from := global_position + Vector3.UP * 1.0
+	var to := from + (-global_transform.basis.z * dist)
+	var q := PhysicsRayQueryParameters3D.create(from, to, 1)
+	q.collide_with_bodies = true
+	var hit := space.intersect_ray(q)
+	return not hit.is_empty()
+
 func take_damage(amount: int) -> void:
 	if _dead:
 		return
 	_health = maxi(_health - amount, 0)
+	# Play the hurt sound (same as the player).
+	if has_node("/root/SoundManager"):
+		get_node("/root/SoundManager").play("hurt")
+	# Tell the player when under attack.
+	if _bridge != null and _bridge.has_method("post_bob_message"):
+		_bridge.post_bob_message("I'm under attack! Help me! (coords %.1f, %.1f, %.1f)" % [global_position.x, global_position.y, global_position.z])
 	if _health <= 0:
 		_die()
 
@@ -312,16 +347,54 @@ func _animate_legs() -> void:
 	_front_right_leg.rotation.x = -swing
 	_back_left_leg.rotation.x = -swing
 
-## Bob's real vision: render what his own 90° camera sees to a PNG and return
-## the path. Because it's a real camera in the real scene, walls block his view
-## and he only sees the direction he's facing — same as you, no x-ray.
-## (This is the feed the baby-LLM server looks at to make decisions.)
+
+## Human-readable state string for the chat brain: what Bob is doing, his
+## coordinates, and whether he's stuck.
+func get_state_string() -> String:
+	var doing: String = "following the player"
+	if _bridge != null and "bob_command" in _bridge:
+		match _bridge.bob_command:
+			"stay":
+				doing = "standing still (stay)"
+			"guard":
+				doing = "guarding you (patrolling)"
+			"mine":
+				doing = "mining"
+	var stuck: String = "no"
+	if _stuck_time > 2.0:
+		stuck = "yes"
+	return "doing=%s, coords=(%.1f, %.1f, %.1f), stuck=%s" % [doing, global_position.x, global_position.y, global_position.z, stuck]
+
+## Bob's real vision: render what his OWN 90° camera sees to a PNG and return
+## the path. Uses a dedicated SubViewport so Bob sees only his own camera's
+## view (walls block him, he only sees the direction he faces — no x-ray, and
+## NOT the player's screen). This is the feed the vision LLM looks at.
 func capture_view(out_path: String) -> bool:
 	var cam: Camera3D = get_node_or_null("CameraPivot/Camera3D") as Camera3D
 	if cam == null:
 		return false
-	var image := cam.get_viewport().get_texture().get_image()
-	# Downscale so the file is small / fast for the baby model to load.
+	# Build a dedicated SubViewport that renders ONLY Bob's camera.
+	var sub := SubViewport.new()
+	sub.size = Vector2i(320, 180)
+	sub.render_target_update_mode = SubViewport.UPDATE_ALWAYS
+	sub.render_target_clear_mode = SubViewport.CLEAR_MODE_ALWAYS
+	sub.own_world_3d = false  # share the main world so Bob sees the real scene
+	sub.world_3d = get_viewport().world_3d
+	# Reparent Bob's camera into the subviewport so it renders his view.
+	var cam_parent: Node = cam.get_parent()
+	cam_parent.remove_child(cam)
+	sub.add_child(cam)
+	cam.current = true
+	# Render one frame and grab the image.
+	await RenderingServer.frame_post_draw
+	var image := sub.get_texture().get_image()
+	# Put the camera back where it was.
+	sub.remove_child(cam)
+	cam_parent.add_child(cam)
+	cam.current = false
+	sub.queue_free()
+	if image == null:
+		return false
 	image.resize(160, 90, Image.INTERPOLATE_LANCZOS)
 	var err := image.save_png(out_path)
 	return err == OK

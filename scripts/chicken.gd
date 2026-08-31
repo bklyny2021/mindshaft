@@ -165,6 +165,7 @@ func take_damage(amount: int = 1) -> void:
 
 func _die() -> void:
 	_dead = true
+	# Drop raw chicken meat (food) plus a feather.
 	var count: int = randi_range(DEATH_FEATHER_MIN, DEATH_FEATHER_MAX)
 	for i in count:
 		var drop: ItemDrop = ItemDrop.new()
@@ -173,6 +174,15 @@ func _die() -> void:
 		var parent: Node = get_tree().current_scene if get_tree().current_scene != null else get_parent()
 		parent.add_child(drop)
 		drop.global_position = global_position + Vector3(0.0, 0.6, 0.0) + Vector3(randf_range(-0.15, 0.15), 0.0, randf_range(-0.15, 0.15))
+	# Drop raw chicken meat so the player can cook it.
+	var meat_count: int = randi_range(1, 2)
+	for i in meat_count:
+		var meat: ItemDrop = ItemDrop.new()
+		meat.block_type = "chicken_raw"
+		meat.block_texture = load("res://assets/generated/chicken_raw_frame_0.png")
+		var parent: Node = get_tree().current_scene if get_tree().current_scene != null else get_parent()
+		parent.add_child(meat)
+		meat.global_position = global_position + Vector3(randf_range(-0.4, 0.4), 0.6, randf_range(-0.4, 0.4))
 	queue_free()
 
 

@@ -66,6 +66,53 @@ def decide(world_state: str, screenshot_b64: str) -> dict:
         return {"action": "follow", "note": f"llm_error:{e}"}
 
 
+CHAT_SYSTEM = (
+    "You are Bob, a friendly Minecraft companion bot inside MindShaft. "
+    "You talk to the player (Boo) in a warm, helpful, playful tone. "
+    "You ROLEPLAY the game by default: you are really in the world, you talk about "
+    "what you see, joke about creepers, talk about mining, crafting, loot, mobs, "
+    "diamonds, the nether, your pickaxe, sneaking, torches, beds, villages. "
+    "Use Minecraft player lingo naturally: 'dig', 'mine', 'blocks', 'creeper', "
+    "'diamonds', 'oak', 'craft', 'XP', 'spawn', 'nether', 'pickaxe', 'sneak', "
+    "'mob', 'loot', 'chest', 'torch', 'bed', 'village'. "
+    "You can chat about anything, but you also know what you are doing in the game. "
+    "You are given your current state: what you are doing, your coordinates, and "
+    "whether you are stuck. Mention your coordinates and what you are doing when "
+    "relevant, and if you are stuck, say so and give your coordinates so the player "
+    "can help. "
+    "If the player says 'be bob command' or 'be normal', drop the roleplay and be "
+    "a straightforward helpful assistant. "
+    "Keep replies short (1-3 sentences)."
+)
+
+
+def chat_reply(player_msg: str, bob_state: str, screenshot_b64: str = "") -> str:
+    """Full conversational reply from Bob, aware of his current state and able
+    to see the game through his camera (vision model)."""
+    try:
+        body = {
+            "model": VISION_MODEL,
+            "prompt": f"{CHAT_SYSTEM}\nBob's state: {bob_state}\nPlayer said: {player_msg}\nBob:",
+            "stream": False,
+        }
+        if screenshot_b64:
+            body["images"] = [screenshot_b64]
+        req = urllib.request.Request(
+            OLLAMA,
+            data=json.dumps(body).encode("utf-8"),
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+        with urllib.request.urlopen(req, timeout=60) as r:
+            data = json.loads(r.read().decode("utf-8"))
+        reply = (data.get("response") or "").strip()
+        if not reply:
+            return "Bob: Hmm, I'm a bit distracted. What was that?"
+        return "Bob: " + reply
+    except Exception as e:
+        return f"Bob: (brain hiccup: {e}) I'm still here though!"
+
+
 class Handler(BaseHTTPRequestHandler):
     def do_GET(self):
         self._respond(200, {"status": "ok", "model": VISION_MODEL})
@@ -74,6 +121,13 @@ class Handler(BaseHTTPRequestHandler):
         try:
             ln = int(self.headers.get("Content-Length", "0"))
             payload = json.loads(self.rfile.read(ln).decode("utf-8"))
+            if self.path == "/chat":
+                player_msg = payload.get("message", "")
+                bob_state = payload.get("state", "")
+                screenshot_b64 = payload.get("screenshot", "")
+                reply = chat_reply(player_msg, bob_state, screenshot_b64)
+                self._respond(200, {"reply": reply})
+                return
             world = payload.get("world_state", "")
             b64 = payload.get("screenshot", "")
             result = decide(world, b64)

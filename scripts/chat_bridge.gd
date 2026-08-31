@@ -107,15 +107,37 @@ func _add_log(line: String) -> void:
 		var first: Node = log_holder.get_child(0)
 		log_holder.remove_child(first)
 		first.queue_free()
+	# Show the chat window and schedule it to fade out after a few seconds.
+	_show_chat_then_fade()
+
+
+## Public: let Bob speak proactively (e.g. when under attack or stuck).
+func post_bob_message(text: String) -> void:
+	_add_log("Bob: " + text)
+
+
+## Show the chat log, then fade it out after a few seconds so it doesn't stay
+## on screen forever. A new message re-shows it.
+func _show_chat_then_fade() -> void:
+	log_holder.modulate.a = 1.0
+	log_holder.visible = true
+	# Kill any existing fade tween so a new message keeps it visible.
+	if log_holder.has_meta("fade_tween"):
+		var old: Tween = log_holder.get_meta("fade_tween")
+		if old != null and old.is_valid():
+			old.kill()
+	var tween: Tween = create_tween()
+	tween.tween_interval(6.0)
+	tween.tween_property(log_holder, "modulate:a", 0.0, 1.5)
+	log_holder.set_meta("fade_tween", tween)
 
 # ---- command parsing ----
 func _process_command(msg: String) -> void:
 	var lower := msg.to_lower()
 	var resp := ""
 
-	if lower.contains("hello") or lower.contains("hi ") or lower == "hi" or lower.contains("hey"):
-		resp = "Bob: Hey Boo! Ready to dig with you. :)"
-	elif lower.contains("follow"):
+	# Commands Bob understands locally (fast, no LLM needed).
+	if lower.contains("follow"):
 		bob_command = "follow"
 		resp = "Bob: On your heels, Boss!"
 	elif lower.contains("guard"):
@@ -134,13 +156,56 @@ func _process_command(msg: String) -> void:
 		resp = "Bob: Point at a block and I'll mine it with you. Or tell me a spot."
 	elif lower.contains("help"):
 		resp = "Bob: I follow your footsteps, help mine, and hang out. Try 'follow', 'guard', 'stay', 'mine that'."
-	elif lower.contains("sword") or lower.contains("fight") or lower.contains("zombie") or lower.contains("monster"):
-		resp = "Bob: I'm a mining buddy, not a fighter yet. If monsters show up I'll keep close to you."
-	elif lower.contains("thank"):
-		resp = "Bob: Anytime! That's what I'm here for."
-	elif lower.contains("who are you"):
-		resp = "Bob: I'm Bob — your MindShaft mining companion."
+	elif lower.contains("bob"):
+		# Free-form chat: only reply when the player says Bob's name.
+		_ask_bob_llm(msg)
+		return
 	else:
-		resp = "Bob: Hmm, I didn't catch that. Try 'follow', 'stay', 'mine that', 'hello'."
+		# Not addressed to Bob — stay quiet.
+		return
 
 	_add_log(resp)
+
+
+## Ask Bob's LLM brain (bob_server.py /chat) for a free-form reply, passing his
+## current state AND a screenshot of what his camera sees, so he can talk about
+## the actual game in front of him.
+func _ask_bob_llm(msg: String) -> void:
+	var state: String = "unknown"
+	var screenshot_b64: String = ""
+	var bots: Array = get_tree().get_nodes_in_group("help_bot")
+	if not bots.is_empty():
+		var bot: Node = bots[0]
+		if bot.has_method("get_state_string"):
+			state = bot.get_state_string()
+		# Capture Bob's real view and send it as base64 so the vision LLM sees it.
+		if bot.has_method("capture_view"):
+			var shot_path: String = "user://bob_chat_view.png"
+			var ok: bool = await bot.capture_view(shot_path)
+			if ok:
+				var f := FileAccess.open(shot_path, FileAccess.READ)
+				if f != null:
+					screenshot_b64 = Marshalls.raw_to_base64(f.get_buffer(f.get_length()))
+					f.close()
+	var http := HTTPRequest.new()
+	add_child(http)
+	http.timeout = 30.0
+	var body := JSON.stringify({"message": msg, "state": state, "screenshot": screenshot_b64})
+	var err := http.request(
+		"http://127.0.0.1:8642/chat",
+		["Content-Type: application/json"],
+		HTTPClient.METHOD_POST,
+		body
+	)
+	if err != OK:
+		http.queue_free()
+		_add_log("Bob: (can't reach my brain) I'm still here though!")
+		return
+	http.request_completed.connect(func(_r, _c, _h, b) -> void:
+		var parsed = JSON.parse_string(b.get_string_from_utf8())
+		if parsed is Dictionary and parsed.has("reply"):
+			_add_log(parsed["reply"])
+		else:
+			_add_log("Bob: ...")
+		http.queue_free()
+	)

@@ -14,10 +14,10 @@ const DAY_SKY_HORIZON: Color = Color(0.62, 0.80, 0.96)
 const DAY_GROUND_BOTTOM: Color = Color(0.55, 0.68, 0.84)
 const DAY_GROUND_HORIZON: Color = Color(0.62, 0.76, 0.90)
 
-const NIGHT_SKY_TOP: Color = Color(0.06, 0.05, 0.22)
-const NIGHT_SKY_HORIZON: Color = Color(0.32, 0.26, 0.58)
-const NIGHT_GROUND_BOTTOM: Color = Color(0.14, 0.13, 0.28)
-const NIGHT_GROUND_HORIZON: Color = Color(0.20, 0.18, 0.38)
+const NIGHT_SKY_TOP: Color = Color(0.02, 0.015, 0.10)
+const NIGHT_SKY_HORIZON: Color = Color(0.12, 0.10, 0.30)
+const NIGHT_GROUND_BOTTOM: Color = Color(0.05, 0.05, 0.12)
+const NIGHT_GROUND_HORIZON: Color = Color(0.08, 0.07, 0.18)
 
 const SUNSET_HORIZON: Color = Color(0.98, 0.52, 0.26)
 const SUNSET_TOP_TINT: Color = Color(0.45, 0.30, 0.50)
@@ -27,13 +27,13 @@ const SUN_COLOR_DAY: Color = Color(1.0, 0.97, 0.9)
 const SUN_COLOR_LOW: Color = Color(1.0, 0.62, 0.35)
 const MOON_COLOR: Color = Color(0.55, 0.65, 1.0)
 const SUN_ENERGY_DAY: float = 1.0
-const MOON_ENERGY: float = 0.12
+const MOON_ENERGY: float = 0.05
 
 # --- Ambient / fog ---
 const AMBIENT_DAY: Color = Color(0.78, 0.83, 0.92)
-const AMBIENT_NIGHT: Color = Color(0.35, 0.38, 0.62)
+const AMBIENT_NIGHT: Color = Color(0.18, 0.20, 0.40)
 const AMBIENT_ENERGY_DAY: float = 1.4
-const AMBIENT_ENERGY_NIGHT: float = 0.75
+const AMBIENT_ENERGY_NIGHT: float = 0.45
 const FOG_DAY: Color = Color(0.72, 0.82, 0.95)
 const FOG_NIGHT: Color = Color(0.42, 0.38, 0.78)
 
@@ -47,10 +47,13 @@ const FOG_NIGHT: Color = Color(0.42, 0.38, 0.78)
 var _sun: DirectionalLight3D
 var _env: Environment
 var _sky: ProceduralSkyMaterial
+var _day: int = 1
+var _last_time_of_day: float = 0.0
 
 
 func _ready() -> void:
 	add_to_group("day_night_cycle")
+	_last_time_of_day = time_of_day
 	if sun_path != NodePath(""):
 		_sun = get_node_or_null(sun_path) as DirectionalLight3D
 	if environment_path != NodePath(""):
@@ -60,6 +63,10 @@ func _ready() -> void:
 			if _env != null:
 				_sky = _env.sky.sky_material as ProceduralSkyMaterial
 	_apply(0.0)
+
+
+func get_day() -> int:
+	return _day
 
 
 func _process(delta: float) -> void:
@@ -82,6 +89,10 @@ func _sun_height() -> float:
 func _apply(delta: float) -> void:
 	if day_length_seconds > 0.0:
 		time_of_day = fposmod(time_of_day + delta / day_length_seconds, 1.0)
+		# Increment the day counter when we wrap past midnight (0.0).
+		if time_of_day < _last_time_of_day:
+			_day += 1
+		_last_time_of_day = time_of_day
 
 	var height: float = _sun_height()
 	# 0 = full night, 1 = full day, smooth twilight band around the horizon.

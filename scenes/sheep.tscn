@@ -52,6 +52,7 @@ animal_group = &"sheep"
 walk_speed = 0.85
 max_health = 6
 walk_cycle_speed = 6.0
+loot_type = "mutton_raw"
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="." unique_id=271109230]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.7, 0)

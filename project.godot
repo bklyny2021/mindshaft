@@ -24,6 +24,7 @@ run/max_fps="120"
 MpManager="*res://scripts/multiplayer_manager.gd"
 GameSettingsMenu="*res://scripts/settings_menu.gd"
 SceneTransition="*res://scripts/scene_transition.gd"
+SoundManager="*res://scripts/sound_manager.gd"
 
 [display]
 

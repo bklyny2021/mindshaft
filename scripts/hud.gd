@@ -41,6 +41,10 @@ const ITEM_NAMES: Dictionary = {
     "planks": "Oak Planks",
     "crafting_table": "Crafting Table",
     "feather": "Feather",
+    "beef_raw": "Raw Beef",
+    "chicken_raw": "Raw Chicken",
+    "porkchop_raw": "Raw Porkchop",
+    "mutton_raw": "Raw Mutton",
     "coal": "Coal",
     "iron": "Iron Ingot",
     "stick": "Stick",
@@ -99,6 +103,10 @@ const RECIPES: Array = [
 var planks_texture: Texture2D = load("res://assets/generated/planks_frame_0.png")
 var crafting_table_texture: Texture2D = load("res://assets/generated/crafting_table_frame_0.png")
 var feather_texture: Texture2D = load("res://assets/generated/feather_frame_0.png")
+var beef_raw_texture: Texture2D = load("res://assets/generated/beef_raw_frame_0.png")
+var chicken_raw_texture: Texture2D = load("res://assets/generated/chicken_raw_frame_0.png")
+var porkchop_raw_texture: Texture2D = load("res://assets/generated/porkchop_raw_frame_0.png")
+var mutton_raw_texture: Texture2D = load("res://assets/generated/mutton_raw_frame_0.png")
 var heart_full_texture: Texture2D = load("res://assets/generated/heart_full_frame_0.png")
 var heart_empty_texture: Texture2D = load("res://assets/generated/heart_empty_frame_0.png")
 var bubble_texture: Texture2D = load("res://assets/generated/bubble_frame_0.png")
@@ -126,6 +134,9 @@ var iron_boots_texture: Texture2D = load("res://assets/generated/iron_boots_fram
 @onready var breath_bar: HBoxContainer = $BreathBar
 @onready var inventory: PanelContainer = $Inventory
 @onready var inv_grid: GridContainer = $Inventory/InvContent/InvGrid
+@onready var clock_label: Label = $ClockLabel
+@onready var damage_overlay: ColorRect = $DamageOverlay
+@onready var hit_splash: ColorRect = $HitSplash
 
 var _slots: Array = []           # length TOTAL_SLOTS, each { type, count }
 var _slot_panels: Array = []     # length TOTAL_SLOTS, parallel to _slots
@@ -166,6 +177,53 @@ func _ready() -> void:
 func _process(_delta: float) -> void:
     if _cursor_preview != null and _cursor_preview.visible:
         _cursor_preview.position = get_viewport().get_mouse_position() - SLOT_SIZE * 0.5
+    _update_clock()
+
+
+## Flash a red tint over the screen when the player takes damage.
+func flash_damage() -> void:
+    if damage_overlay == null:
+        return
+    damage_overlay.visible = true
+    damage_overlay.color.a = 0.5
+    # Fade the tint out over ~0.4s.
+    var tween: Tween = create_tween()
+    tween.tween_property(damage_overlay, "color:a", 0.0, 0.4)
+    tween.tween_callback(func() -> void:
+        damage_overlay.visible = false)
+
+
+## Flash a red hit splash when the player lands a hit on anything.
+func flash_hit() -> void:
+    if hit_splash == null:
+        return
+    hit_splash.visible = true
+    hit_splash.color.a = 0.35
+    # Fade the splash out over ~0.15s.
+    var tween: Tween = create_tween()
+    tween.tween_property(hit_splash, "color:a", 0.0, 0.15)
+    tween.tween_callback(func() -> void:
+        hit_splash.visible = false)
+
+
+func _update_clock() -> void:
+    if clock_label == null:
+        return
+    var dnc: Node = get_tree().get_first_node_in_group("day_night_cycle")
+    if dnc == null or not dnc.has_method("get_time_of_day"):
+        return
+    var tod: float = dnc.get_time_of_day()
+    var day: int = dnc.get_day() if dnc.has_method("get_day") else 1
+    # time_of_day: 0=midnight, 0.25=sunrise(6am), 0.5=noon(12pm), 0.75=sunset(6pm).
+    var hours: float = fposmod(tod * 24.0, 24.0)
+    var h24: int = int(floor(hours))
+    var m: int = int(floor(fposmod(hours, 1.0) * 60.0))
+    # Convert to 12-hour AM/PM.
+    var period: String = "AM" if h24 < 12 else "PM"
+    var h12: int = h24 % 12
+    if h12 == 0:
+        h12 = 12
+    clock_label.text = "Day %d  %d:%02d %s" % [day, h12, m, period]
 
 
 # ------------------------- public API -------------------------
@@ -386,10 +444,11 @@ func _build_crafting_section() -> void:
 
     var rec_list: RichTextLabel = RichTextLabel.new()
     rec_list.name = "RecipeList"
-    rec_list.fit_content = true
+    rec_list.fit_content = false
     rec_list.scroll_active = true
-    rec_list.custom_minimum_size = Vector2(320, 120)
-    rec_list.add_theme_font_size_override("normal_font_size", 12)
+    rec_list.custom_minimum_size = Vector2(300, 70)
+    rec_list.size_flags_vertical = Control.SIZE_EXPAND_FILL
+    rec_list.add_theme_font_size_override("normal_font_size", 11)
     rec_list.add_theme_color_override("default_color", Color(0.1, 0.1, 0.1, 1))
     rec_list.bbcode_enabled = true
     rec_list.text = _recipe_list_bb()
@@ -775,6 +834,14 @@ func _texture_for(type: String) -> Texture2D:
             return crafting_table_texture
         "feather":
             return feather_texture
+        "beef_raw":
+            return beef_raw_texture
+        "chicken_raw":
+            return chicken_raw_texture
+        "porkchop_raw":
+            return porkchop_raw_texture
+        "mutton_raw":
+            return mutton_raw_texture
         "stick":
             return stick_texture
         "coal":
@@ -823,7 +890,7 @@ func _input(event: InputEvent) -> void:
         return
     if event is InputEventKey and event.pressed and not event.echo:
         var k: int = event.keycode
-        if k == KEY_E:
+        if k == KEY_E or k == KEY_Y:
             # The complete creative palette already fits in the hotbar; keeping the
             # survival inventory closed prevents those infinite slots being moved.
             if not _creative_mode:

@@ -1,0 +1,115 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/hostile_mob.gd" id="1_mob"]
+
+[sub_resource type="BoxShape3D" id="MobCollider"]
+size = Vector3(0.7, 1.8, 0.7)
+
+[sub_resource type="StandardMaterial3D" id="SkinMat"]
+resource_local_to_scene = true
+albedo_color = Color(0.45, 0.65, 0.4, 1)
+roughness = 0.9
+emission_enabled = true
+emission = Color(0.1, 0.15, 0.08, 1)
+emission_energy_multiplier = 0.4
+
+[sub_resource type="StandardMaterial3D" id="ShirtMat"]
+resource_local_to_scene = true
+albedo_color = Color(0.2, 0.45, 0.3, 1)
+roughness = 0.9
+
+[sub_resource type="StandardMaterial3D" id="PantsMat"]
+resource_local_to_scene = true
+albedo_color = Color(0.15, 0.3, 0.2, 1)
+roughness = 0.9
+
+[sub_resource type="StandardMaterial3D" id="EyeMat"]
+resource_local_to_scene = true
+albedo_color = Color(0.0, 0.0, 0.0, 1)
+roughness = 0.9
+
+[sub_resource type="BoxMesh" id="HeadMesh"]
+material = SubResource("SkinMat")
+size = Vector3(0.5, 0.5, 0.5)
+
+[sub_resource type="BoxMesh" id="TorsoMesh"]
+material = SubResource("ShirtMat")
+size = Vector3(0.6, 0.7, 0.4)
+
+[sub_resource type="BoxMesh" id="ArmMesh"]
+material = SubResource("SkinMat")
+size = Vector3(0.2, 0.6, 0.2)
+
+[sub_resource type="BoxMesh" id="LegMesh"]
+material = SubResource("PantsMat")
+size = Vector3(0.25, 0.6, 0.25)
+
+[sub_resource type="BoxMesh" id="EyeMesh"]
+material = SubResource("EyeMat")
+size = Vector3(0.08, 0.1, 0.05)
+
+[sub_resource type="StandardMaterial3D" id="BarBackMat"]
+albedo_color = Color(0.1, 0.1, 0.1, 0.8)
+transparency = 1
+
+[sub_resource type="StandardMaterial3D" id="BarFillMat"]
+albedo_color = Color(0.2, 0.9, 0.2, 1)
+
+[sub_resource type="BoxMesh" id="BarBackMesh"]
+material = SubResource("BarBackMat")
+size = Vector3(0.7, 0.08, 0.05)
+
+[sub_resource type="BoxMesh" id="BarFillMesh"]
+material = SubResource("BarFillMat")
+size = Vector3(0.7, 0.08, 0.05)
+
+[node name="HostileMob" type="CharacterBody3D"]
+script = ExtResource("1_mob")
+
+[node name="HealthBar" type="Node3D" parent="."]
+
+[node name="Back" type="MeshInstance3D" parent="HealthBar"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.1, 0)
+mesh = SubResource("BarBackMesh")
+
+[node name="Fill" type="MeshInstance3D" parent="HealthBar"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.1, 0)
+mesh = SubResource("BarFillMesh")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.9, 0)
+shape = SubResource("MobCollider")
+
+[node name="Model" type="Node3D" parent="."]
+
+[node name="Torso" type="MeshInstance3D" parent="Model"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.0, 0)
+mesh = SubResource("TorsoMesh")
+
+[node name="Head" type="MeshInstance3D" parent="Model"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.55, 0)
+mesh = SubResource("HeadMesh")
+
+[node name="LeftEye" type="MeshInstance3D" parent="Model"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.12, 1.6, -0.25)
+mesh = SubResource("EyeMesh")
+
+[node name="RightEye" type="MeshInstance3D" parent="Model"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.12, 1.6, -0.25)
+mesh = SubResource("EyeMesh")
+
+[node name="LeftArm" type="MeshInstance3D" parent="Model"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.4, 1.0, 0)
+mesh = SubResource("ArmMesh")
+
+[node name="RightArm" type="MeshInstance3D" parent="Model"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.4, 1.0, 0)
+mesh = SubResource("ArmMesh")
+
+[node name="LeftLeg" type="MeshInstance3D" parent="Model"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.15, 0.3, 0)
+mesh = SubResource("LegMesh")
+
+[node name="RightLeg" type="MeshInstance3D" parent="Model"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.15, 0.3, 0)
+mesh = SubResource("LegMesh")

@@ -15,7 +15,7 @@ const PITCH_LIMIT: float = deg_to_rad(89.0)
 const FP_CAMERA_OFFSET: Vector3 = Vector3.ZERO
 const TP_CAMERA_OFFSET: Vector3 = Vector3(0.0, 0.4, 3.5)
 
-const MAX_REACH: float = 4.0
+const MAX_REACH: float = 1.0
 const RUNTIME_MODE_SETTING: String = "game/runtime_mode"
 const MODE_CREATIVE: String = "creative"
 const PLANKS_TEXTURE: Texture2D = preload("res://assets/generated/planks_frame_0.png")
@@ -42,6 +42,13 @@ const DROWN_DAMAGE_INTERVAL: float = 3.0  # 1 damage every 3s when out of air
 const FLY_BOOST_MULT: float = 2.5  # Shift + forward while flying
 const FLY_DOUBLE_TAP_WINDOW: float = 0.3
 const STAND_PIVOT_Y: float = 1.6
+
+## The connected gamepad device id (0 if none). Godot assigns ids in order of
+## connection; using the first connected joypad is the safe default.
+func _joy_id() -> int:
+    for i in Input.get_connected_joypads().size():
+        return i
+    return -1
 const CROUCH_PIVOT_Y: float = 1.1
 const CROUCH_LERP_RATE: float = 12.0
 const CROUCH_POSE_LERP_RATE: float = 14.0
@@ -152,6 +159,8 @@ var _current_crack_stage: int = -1
 
 var _health: int = MAX_HEALTH
 var _was_on_floor: bool = true
+var _was_in_water: bool = false
+var _spawned: bool = false
 var _fall_start_y: float = 0.0
 var _breath: float = MAX_BREATH
 var _drown_timer: float = 0.0
@@ -196,6 +205,10 @@ func _ready() -> void:
     camera_pivot.rotation.x = _pitch
     _apply_perspective()
     _on_selection_changed(0, "")  # ensure held-block starts hidden
+    # Give the player an iron sword in hand at spawn (deferred so the HUD's
+    # slot array is ready first).
+    if _hud != null and _hud.has_method("add_item"):
+        _hud.call_deferred("add_item", "iron_sword", 1)
     if fp_arm != null:
         _fp_arm_rest = fp_arm.position
         _fp_arm_rest_rot = fp_arm.rotation
@@ -304,6 +317,11 @@ func _physics_process(delta: float) -> void:
     # only drains when your head is actually underwater — not just your feet.
     var head_y: float = global_position.y + STAND_PIVOT_Y
     var in_water: bool = head_y < WATER_SURFACE_Y
+    # Play a splash when the player enters the water.
+    if in_water and not _was_in_water:
+        if has_node("/root/SoundManager"):
+            get_node("/root/SoundManager").play("water_splash")
+    _was_in_water = in_water
 
     # Always apply gravity, even when input is locked (inventory open, mouse free).
     # Fly mode ignores gravity entirely. In water, gravity is HALVED (you feel
@@ -354,7 +372,7 @@ func _physics_process(delta: float) -> void:
     _w_was_pressed = w_now
 
     # --- Right stick click (R3) toggles run ---
-    var r3_now: bool = Input.is_joy_button_pressed(0, JOY_BUTTON_RIGHT_STICK)
+    var r3_now: bool = Input.is_joy_button_pressed(_joy_id(), JOY_BUTTON_RIGHT_STICK)
     if r3_now and not _r3_was_pressed:
         _run_toggle = not _run_toggle
     _r3_was_pressed = r3_now
@@ -392,7 +410,7 @@ func _physics_process(delta: float) -> void:
 
     # Jump (disabled while crouching for true sneak). In water, Space swims you up.
     # Xbox: A button = jump/swim.
-    var jump_pressed: bool = Input.is_physical_key_pressed(KEY_SPACE) or Input.is_joy_button_pressed(0, JOY_BUTTON_A)
+    var jump_pressed: bool = Input.is_physical_key_pressed(KEY_SPACE) or Input.is_joy_button_pressed(_joy_id(), JOY_BUTTON_A)
     if jump_pressed:
         if in_water:
             velocity.y = SWIM_UP_SPEED
@@ -400,8 +418,8 @@ func _physics_process(delta: float) -> void:
             velocity.y = JUMP_VELOCITY
 
     # Right stick: look around (works alongside mouse).
-    var look_x: float = Input.get_joy_axis(0, JOY_AXIS_RIGHT_X)
-    var look_y: float = Input.get_joy_axis(0, JOY_AXIS_RIGHT_Y)
+    var look_x: float = Input.get_joy_axis(_joy_id(), JOY_AXIS_RIGHT_X)
+    var look_y: float = Input.get_joy_axis(_joy_id(), JOY_AXIS_RIGHT_Y)
     if absf(look_x) > 0.15 or absf(look_y) > 0.15:
         _yaw -= look_x * MOUSE_SENSITIVITY * 14.0
         _pitch -= look_y * MOUSE_SENSITIVITY * 14.0
@@ -421,8 +439,8 @@ func _physics_process(delta: float) -> void:
     if w_now:
         iz -= 1.0
     # Left stick: X = strafe, Y = forward/back (Y is inverted on sticks).
-    var stick_x: float = Input.get_joy_axis(0, JOY_AXIS_LEFT_X)
-    var stick_y: float = Input.get_joy_axis(0, JOY_AXIS_LEFT_Y)
+    var stick_x: float = Input.get_joy_axis(_joy_id(), JOY_AXIS_LEFT_X)
+    var stick_y: float = Input.get_joy_axis(_joy_id(), JOY_AXIS_LEFT_Y)
     if absf(stick_x) > 0.2:
         ix += stick_x
     if absf(stick_y) > 0.2:
@@ -465,6 +483,11 @@ func _physics_process(delta: float) -> void:
 
 
 func _update_fall_damage() -> void:
+    # Skip fall damage until the deferred spawn has placed the player (they
+    # start high up and fall before being repositioned).
+    if not _spawned:
+        _was_on_floor = is_on_floor()
+        return
     var on_floor: bool = is_on_floor()
     if _was_on_floor and not on_floor:
         # Just left the ground — remember where the fall began.
@@ -475,7 +498,7 @@ func _update_fall_damage() -> void:
         if fall_distance > 3.0:
             var dmg: int = int(round((fall_distance - 3.0) * FALL_DAMAGE_SCALE))
             if dmg > 0:
-                take_damage(dmg)
+                take_damage(dmg, "fall damage")
     _was_on_floor = on_floor
 
 
@@ -487,7 +510,7 @@ func _update_breath(delta: float, in_water: bool) -> void:
             _drown_timer += delta
             if _drown_timer >= DROWN_DAMAGE_INTERVAL:
                 _drown_timer = 0.0
-                take_damage(1)
+                take_damage(1, "drowning")
     else:
         _breath = minf(_breath + BREATH_REGEN * delta, MAX_BREATH)
         _drown_timer = 0.0
@@ -495,11 +518,21 @@ func _update_breath(delta: float, in_water: bool) -> void:
         _hud.set_breath(_breath / MAX_BREATH)
 
 
-func take_damage(amount: int = 1) -> void:
+var _last_damage_source: String = ""
+
+func take_damage(amount: int = 1, source: String = "") -> void:
     if _health <= 0:
         return
     _health = maxi(_health - amount, 0)
+    if source != "":
+        _last_damage_source = source
     _sync_health_to_hud()
+    # Play the hurt sound.
+    if has_node("/root/SoundManager"):
+        get_node("/root/SoundManager").play("hurt")
+    # Red damage tint on the screen.
+    if _hud != null and _hud.has_method("flash_damage"):
+        _hud.flash_damage()
     if _health <= 0:
         _die()
 
@@ -526,6 +559,11 @@ func _sync_health_to_hud() -> void:
 func _die() -> void:
     # Show the death menu instead of auto-respawning — the player chooses where.
     velocity = Vector3.ZERO
+    # Post how the player died to the in-game chat.
+    var cause: String = _last_damage_source if _last_damage_source != "" else "unknown"
+    var bridges: Array = get_tree().get_nodes_in_group("chat_bridge")
+    if not bridges.is_empty() and bridges[0].has_method("post_bob_message"):
+        bridges[0].post_bob_message("You died! Killed by: %s" % cause)
     var menus: Array = get_tree().get_nodes_in_group("settings_menu")
     if not menus.is_empty() and menus[0].has_method("show_death"):
         menus[0].show_death()
@@ -582,6 +620,11 @@ func _start_deferred_spawn() -> void:
                 return
         global_position = target
         velocity = Vector3.ZERO
+        # Reset fall state so the player doesn't take fall damage from the
+        # initial drop before the deferred spawn placed them.
+        _fall_start_y = global_position.y
+        _was_on_floor = true
+        _spawned = true
     )
 
 
@@ -823,6 +866,9 @@ func _try_punch_target() -> void:
     var collider: Object = hit.get("collider")
     if collider != null and collider.has_method("take_damage"):
         collider.take_damage(_current_damage())
+        # Red hit splash when the player lands a hit.
+        if _hud != null and _hud.has_method("flash_hit"):
+            _hud.flash_hit()
 
 
 ## Damage per swing depends on the held item. Hands are weakest; swords scale
@@ -868,7 +914,7 @@ func _update_mining(delta: float) -> void:
         return
     var mining_held: bool = (
         Input.mouse_mode == Input.MOUSE_MODE_CAPTURED
-        and (Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT) or Input.get_joy_axis(0, JOY_AXIS_TRIGGER_RIGHT) > 0.5)
+        and (Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT) or Input.get_joy_axis(_joy_id(), JOY_AXIS_TRIGGER_RIGHT) > 0.5)
     )
     if not mining_held:
         _stop_mining()
@@ -897,6 +943,9 @@ func _update_mining(delta: float) -> void:
             _sync_block_removed(block_pos)
             if should_spawn_mined_drop():
                 _spawn_item_drop(Vector3(block_pos), removed)
+            # Play the block-break sound.
+            if has_node("/root/SoundManager"):
+                get_node("/root/SoundManager").play("block_break")
         _stop_mining()
         return
 
@@ -1013,11 +1062,13 @@ func _on_selection_changed(_slot: int, type: String) -> void:
         held_block.set_surface_override_material(0, null)
         return
     var tex: Texture2D = _texture_for(type)
-    if tex == null:
+    var is_tool: bool = type.ends_with("_sword") or type.ends_with("_pickaxe") or type.ends_with("_axe")
+    if tex == null and not is_tool:
         held_block.visible = false
         return
     var mat: StandardMaterial3D = StandardMaterial3D.new()
-    mat.albedo_texture = tex
+    if tex != null:
+        mat.albedo_texture = tex
     mat.texture_filter = BaseMaterial3D.TEXTURE_FILTER_NEAREST
     held_block.set_surface_override_material(0, mat)
     held_block.visible = true

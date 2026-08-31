@@ -136,6 +136,15 @@ func take_damage(amount: int = 1) -> void:
 
 func _die() -> void:
 	_dead = true
+	# Drop raw beef so the player can cook it.
+	var count: int = randi_range(1, 2)
+	for i in count:
+		var drop: ItemDrop = ItemDrop.new()
+		drop.block_type = "beef_raw"
+		drop.block_texture = load("res://assets/generated/beef_raw_frame_0.png")
+		var parent: Node = get_tree().current_scene if get_tree().current_scene != null else get_parent()
+		parent.add_child(drop)
+		drop.global_position = global_position + Vector3(randf_range(-0.4, 0.4), 0.6, randf_range(-0.4, 0.4))
 	queue_free()
 
 

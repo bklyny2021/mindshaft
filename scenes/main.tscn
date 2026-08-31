@@ -13,6 +13,8 @@
 [ext_resource type="Texture2D" uid="uid://c68jqejpadxsx" path="res://assets/generated/wood_frame_0.png" id="11_wood"]
 [ext_resource type="Texture2D" uid="uid://co3fxxf1ehitk" path="res://assets/generated/leaves_frame_0.png" id="12_leaves"]
 [ext_resource type="Texture2D" uid="uid://5ybo7vdslnm1" path="res://assets/generated/sand_frame_0.png" id="13_sand"]
+[ext_resource type="Texture2D" path="res://assets/generated/planks_frame_0.png" id="34_planks"]
+[ext_resource type="Texture2D" path="res://assets/generated/crafting_table_frame_0.png" id="35_crafting_table"]
 [ext_resource type="Shader" path="res://shaders/water.gdshader" id="33_water_shader"]
 [ext_resource type="Script" uid="uid://bkhsk2cy403ss" path="res://scripts/day_night_cycle.gd" id="14_daynight"]
 [ext_resource type="Script" path="res://scripts/chat_bridge.gd" id="23_chat"]
@@ -25,6 +27,7 @@
 [ext_resource type="Script" uid="uid://bds2t7b87nq5n" path="res://scripts/chicken_spawner.gd" id="17_chicken_spawner"]
 [ext_resource type="Script" uid="uid://bq87ltlufqped" path="res://scripts/cow_spawner.gd" id="18_cow_spawner"]
 [ext_resource type="Script" uid="uid://bjv2byjawbsjl" path="res://scripts/passive_animal_spawner.gd" id="19_animal_spawner"]
+[ext_resource type="Script" path="res://scripts/hostile_mob_spawner.gd" id="23_mob_spawner"]
 [ext_resource type="PackedScene" uid="uid://dode3332cm63r" path="res://scenes/pig.tscn" id="20_pig"]
 [ext_resource type="PackedScene" uid="uid://coskte270eebo" path="res://scenes/sheep.tscn" id="21_sheep"]
 [ext_resource type="PackedScene" uid="uid://b11mdlqik1vf1" path="res://scenes/cat.tscn" id="22_cat"]
@@ -128,6 +131,8 @@ cobble_texture = ExtResource("4_cobble")
 wood_texture = ExtResource("11_wood")
 leaves_texture = ExtResource("12_leaves")
 sand_texture = ExtResource("13_sand")
+planks_texture = ExtResource("34_planks")
+crafting_table_texture = ExtResource("35_crafting_table")
 
 [node name="Water" type="MeshInstance3D" parent="."]
 unique_name_in_owner = true
@@ -209,6 +214,13 @@ animal_scene = ExtResource("22_cat")
 spawn_count = 2
 spawn_min_radius = 5
 spawn_max_radius = 14
+
+[node name="HostileMobSpawner" type="Node3D" parent="."]
+script = ExtResource("23_mob_spawner")
+world_path = NodePath("../World")
+spawn_count = 3
+spawn_min_radius = 8
+spawn_max_radius = 16
 
 [node name="HUD" parent="." unique_id=444951439 instance=ExtResource("9_hud")]
 dirt_texture = ExtResource("3_dirt")
