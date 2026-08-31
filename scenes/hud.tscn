@@ -1,0 +1,61 @@
+[gd_scene format=3 uid="uid://dhh4xubsndg1q"]
+
+[ext_resource type="Script" uid="uid://rg61xqp31f5k" path="res://scripts/hud.gd" id="1_hud"]
+
+[node name="HUD" type="CanvasLayer" unique_id=1033324548]
+script = ExtResource("1_hud")
+
+[node name="Hotbar" type="HBoxContainer" parent="." unique_id=849585978]
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -245.0
+offset_top = -70.0
+offset_right = 245.0
+offset_bottom = -12.0
+mouse_filter = 2
+theme_override_constants/separation = 4
+alignment = 1
+
+[node name="HealthBar" type="HBoxContainer" parent="." unique_id=1082010198]
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -245.0
+offset_top = -100.0
+offset_right = -55.0
+offset_bottom = -74.0
+mouse_filter = 2
+theme_override_constants/separation = 2
+
+[node name="Inventory" type="PanelContainer" parent="." unique_id=407750544]
+visible = false
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -300.0
+offset_top = -190.0
+offset_right = 300.0
+offset_bottom = 190.0
+
+[node name="InvContent" type="VBoxContainer" parent="Inventory" unique_id=509455215]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="Title" type="Label" parent="Inventory/InvContent" unique_id=635631938]
+layout_mode = 2
+theme_override_font_sizes/font_size = 22
+text = "Inventory"
+horizontal_alignment = 1
+
+[node name="InvGrid" type="GridContainer" parent="Inventory/InvContent" unique_id=2116232803]
+layout_mode = 2
+theme_override_constants/h_separation = 4
+theme_override_constants/v_separation = 4
+columns = 9

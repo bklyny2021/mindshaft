@@ -1,0 +1,276 @@
+[gd_scene format=3 uid="uid://bdvd7js6k44bb"]
+
+[ext_resource type="Script" uid="uid://cbmnb83mga445" path="res://scripts/main_menu.gd" id="1_menu"]
+[ext_resource type="Script" uid="uid://bw7rd1ogkv31w" path="res://scripts/world.gd" id="2_world"]
+[ext_resource type="Texture2D" uid="uid://de38g8kwehcw8" path="res://assets/generated/dirt_frame_0.png" id="3_dirt"]
+[ext_resource type="Texture2D" uid="uid://3bygmtfoqf6a" path="res://assets/generated/grass_top_frame_0.png" id="4_grass"]
+[ext_resource type="Texture2D" uid="uid://kbjajdu3h6b0" path="res://assets/generated/cobblestone_frame_0.png" id="5_cobble"]
+[ext_resource type="Texture2D" uid="uid://c68jqejpadxsx" path="res://assets/generated/wood_frame_0.png" id="6_wood"]
+[ext_resource type="Texture2D" uid="uid://co3fxxf1ehitk" path="res://assets/generated/leaves_frame_0.png" id="7_leaves"]
+[ext_resource type="Texture2D" uid="uid://5ybo7vdslnm1" path="res://assets/generated/sand_frame_0.png" id="8_sand"]
+
+[sub_resource type="ProceduralSkyMaterial" id="SkyMat_1"]
+sky_top_color = Color(0.06, 0.05, 0.22, 1)
+sky_horizon_color = Color(0.32, 0.26, 0.58, 1)
+ground_bottom_color = Color(0.14, 0.13, 0.28, 1)
+ground_horizon_color = Color(0.2, 0.18, 0.38, 1)
+ground_curve = 0.15
+
+[sub_resource type="Sky" id="Sky_1"]
+sky_material = SubResource("SkyMat_1")
+
+[sub_resource type="Environment" id="Env_1"]
+background_mode = 2
+sky = SubResource("Sky_1")
+ambient_light_source = 2
+ambient_light_color = Color(0.55, 0.62, 0.95, 1)
+ambient_light_sky_contribution = 0.35
+ambient_light_energy = 1.4
+tonemap_mode = 2
+glow_enabled = true
+glow_intensity = 0.55
+glow_bloom = 0.18
+fog_enabled = true
+fog_light_color = Color(0.42, 0.38, 0.78, 1)
+fog_light_energy = 1.1
+fog_sun_scatter = 0.15
+fog_density = 0.012
+fog_aerial_perspective = 0.5
+fog_sky_affect = 0.4
+
+[sub_resource type="SystemFont" id="TitleFont_1"]
+font_names = PackedStringArray("Open Sans", "Arial", "Helvetica", "Sans")
+font_weight = 800
+subpixel_positioning = 0
+
+[sub_resource type="LabelSettings" id="TitleSettings_1"]
+font = SubResource("TitleFont_1")
+font_size = 112
+outline_size = 6
+outline_color = Color(0.06, 0.06, 0.06, 0.9)
+shadow_size = 3
+shadow_color = Color(0, 0, 0, 0.5)
+shadow_offset = Vector2(0, 3)
+
+[node name="MainMenu" type="Node3D" unique_id=647547191]
+script = ExtResource("1_menu")
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="." unique_id=1581230359]
+environment = SubResource("Env_1")
+
+[node name="Sun" type="DirectionalLight3D" parent="." unique_id=723579602]
+transform = Transform3D(0.866025, -0.353553, 0.353553, 0, 0.707107, 0.707107, -0.5, -0.612372, 0.612372, 0, 30, 0)
+light_color = Color(1, 0.92, 0.78, 1)
+light_energy = 1.2
+shadow_enabled = true
+
+[node name="World" type="Node3D" parent="." unique_id=1375964446]
+script = ExtResource("2_world")
+dirt_texture = ExtResource("3_dirt")
+grass_top_texture = ExtResource("4_grass")
+cobble_texture = ExtResource("5_cobble")
+wood_texture = ExtResource("6_wood")
+leaves_texture = ExtResource("7_leaves")
+sand_texture = ExtResource("8_sand")
+
+[node name="CameraAnchor" type="Node3D" parent="." unique_id=21502645 groups=["player"]]
+
+[node name="Pivot" type="Node3D" parent="CameraAnchor" unique_id=1322045323]
+
+[node name="Camera3D" type="Camera3D" parent="CameraAnchor/Pivot" unique_id=353162132]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 20, 30)
+current = true
+far = 300.0
+
+[node name="UI" type="CanvasLayer" parent="." unique_id=138781435]
+
+[node name="BackgroundDim" type="ColorRect" parent="UI" unique_id=1849728312]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(0, 0, 0, 0.55)
+
+[node name="Center" type="CenterContainer" parent="UI" unique_id=1482475320]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Panel" type="MarginContainer" parent="UI/Center" unique_id=270203563]
+custom_minimum_size = Vector2(336, 0)
+layout_mode = 2
+
+[node name="VBox" type="VBoxContainer" parent="UI/Center/Panel" unique_id=537738186]
+layout_mode = 2
+theme_override_constants/separation = 12
+alignment = 1
+
+[node name="Title" type="Label" parent="UI/Center/Panel/VBox" unique_id=922361284]
+layout_mode = 2
+text = "MINDSHAFT 0.2.2"
+label_settings = SubResource("TitleSettings_1")
+horizontal_alignment = 1
+
+[node name="Spacer" type="Control" parent="UI/Center/Panel/VBox" unique_id=1853771138]
+custom_minimum_size = Vector2(0, 4)
+layout_mode = 2
+
+[node name="MainButtons" type="VBoxContainer" parent="UI/Center/Panel/VBox" unique_id=1942953076]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="SeedLabel" type="Label" parent="UI/Center/Panel/VBox/MainButtons"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.76, 0.76, 0.82, 1)
+theme_override_font_sizes/font_size = 13
+text = "World seed (blank = random)"
+horizontal_alignment = 1
+
+[node name="SeedInput" type="LineEdit" parent="UI/Center/Panel/VBox/MainButtons"]
+custom_minimum_size = Vector2(0, 42)
+layout_mode = 2
+theme_override_font_sizes/font_size = 16
+placeholder_text = "Number or world name"
+alignment = 1
+max_length = 32
+
+[node name="ModeButton" type="Button" parent="UI/Center/Panel/VBox/MainButtons"]
+custom_minimum_size = Vector2(0, 42)
+layout_mode = 2
+theme_override_font_sizes/font_size = 15
+text = "Game Mode: Survival"
+
+[node name="PlayButton" type="Button" parent="UI/Center/Panel/VBox/MainButtons" unique_id=523975460]
+custom_minimum_size = Vector2(0, 46)
+layout_mode = 2
+theme_override_font_sizes/font_size = 16
+text = "Play Single Player"
+
+[node name="MultiplayerButton" type="Button" parent="UI/Center/Panel/VBox/MainButtons" unique_id=970360008]
+custom_minimum_size = Vector2(0, 46)
+layout_mode = 2
+theme_override_font_sizes/font_size = 16
+text = "Multiplayer"
+
+[node name="QuitButton" type="Button" parent="UI/Center/Panel/VBox/MainButtons" unique_id=489984728]
+custom_minimum_size = Vector2(0, 46)
+layout_mode = 2
+theme_override_font_sizes/font_size = 16
+text = "Quit"
+
+[node name="MultiplayerView" type="VBoxContainer" parent="UI/Center/Panel/VBox"]
+visible = false
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="ViewTitle" type="Label" parent="UI/Center/Panel/VBox/MultiplayerView"]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_font_sizes/font_size = 24
+text = "Multiplayer"
+horizontal_alignment = 1
+
+[node name="HostButton" type="Button" parent="UI/Center/Panel/VBox/MultiplayerView"]
+custom_minimum_size = Vector2(0, 46)
+layout_mode = 2
+theme_override_font_sizes/font_size = 16
+text = "Host Game"
+
+[node name="JoinButton" type="Button" parent="UI/Center/Panel/VBox/MultiplayerView"]
+custom_minimum_size = Vector2(0, 46)
+layout_mode = 2
+theme_override_font_sizes/font_size = 16
+text = "Join Game"
+
+[node name="BackButton" type="Button" parent="UI/Center/Panel/VBox/MultiplayerView"]
+custom_minimum_size = Vector2(0, 46)
+layout_mode = 2
+theme_override_font_sizes/font_size = 16
+text = "Back"
+
+[node name="HostView" type="VBoxContainer" parent="UI/Center/Panel/VBox" unique_id=1126489264]
+visible = false
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="StatusLabel" type="Label" parent="UI/Center/Panel/VBox/HostView" unique_id=898741266]
+custom_minimum_size = Vector2(336, 0)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.9, 0.9, 0.94, 1)
+theme_override_font_sizes/font_size = 18
+text = "Creating room..."
+horizontal_alignment = 1
+autowrap_mode = 2
+
+[node name="RoomCodeLabel" type="Label" parent="UI/Center/Panel/VBox/HostView" unique_id=1437788239]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_colors/font_outline_color = Color(0.05, 0.05, 0.05, 0.9)
+theme_override_constants/outline_size = 4
+theme_override_font_sizes/font_size = 48
+text = "----"
+horizontal_alignment = 1
+
+[node name="HintLabel" type="Label" parent="UI/Center/Panel/VBox/HostView" unique_id=818106092]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.7, 0.7, 0.76, 1)
+theme_override_font_sizes/font_size = 14
+text = "Share this code with friends"
+horizontal_alignment = 1
+
+[node name="StartButton" type="Button" parent="UI/Center/Panel/VBox/HostView" unique_id=639512160]
+custom_minimum_size = Vector2(0, 46)
+layout_mode = 2
+theme_override_font_sizes/font_size = 16
+disabled = true
+text = "Enter World"
+
+[node name="CancelButton" type="Button" parent="UI/Center/Panel/VBox/HostView" unique_id=1676506921]
+custom_minimum_size = Vector2(0, 46)
+layout_mode = 2
+theme_override_font_sizes/font_size = 16
+text = "Cancel"
+
+[node name="JoinView" type="VBoxContainer" parent="UI/Center/Panel/VBox" unique_id=1898053815]
+visible = false
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="ViewTitle" type="Label" parent="UI/Center/Panel/VBox/JoinView" unique_id=911009283]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_font_sizes/font_size = 24
+text = "Join Multiplayer"
+horizontal_alignment = 1
+
+[node name="CodeInput" type="LineEdit" parent="UI/Center/Panel/VBox/JoinView" unique_id=603748204]
+custom_minimum_size = Vector2(0, 56)
+layout_mode = 2
+theme_override_font_sizes/font_size = 28
+placeholder_text = "1234"
+alignment = 1
+max_length = 4
+
+[node name="StatusLabel" type="Label" parent="UI/Center/Panel/VBox/JoinView" unique_id=418090309]
+custom_minimum_size = Vector2(336, 20)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.78, 0.78, 0.84, 1)
+theme_override_font_sizes/font_size = 14
+horizontal_alignment = 1
+autowrap_mode = 2
+
+[node name="ConnectButton" type="Button" parent="UI/Center/Panel/VBox/JoinView" unique_id=268281371]
+custom_minimum_size = Vector2(0, 46)
+layout_mode = 2
+theme_override_font_sizes/font_size = 16
+text = "Join Room"
+
+[node name="CancelButton" type="Button" parent="UI/Center/Panel/VBox/JoinView" unique_id=1968747481]
+custom_minimum_size = Vector2(0, 46)
+layout_mode = 2
+theme_override_font_sizes/font_size = 16
+text = "Cancel"

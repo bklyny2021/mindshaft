@@ -1,0 +1,217 @@
+[gd_scene format=3 uid="uid://c6fi62b67dbnb"]
+
+[ext_resource type="Script" uid="uid://bw7rd1ogkv31w" path="res://scripts/world.gd" id="1_world"]
+[ext_resource type="Script" uid="uid://bh2amputysq36" path="res://scripts/player.gd" id="2_player"]
+[ext_resource type="Texture2D" uid="uid://de38g8kwehcw8" path="res://assets/generated/dirt_frame_0.png" id="3_dirt"]
+[ext_resource type="Texture2D" uid="uid://kbjajdu3h6b0" path="res://assets/generated/cobblestone_frame_0.png" id="4_cobble"]
+[ext_resource type="PackedScene" path="res://scenes/crosshair.tscn" id="5_crosshair"]
+[ext_resource type="PackedScene" uid="uid://dvifdwakpmsws" path="res://scenes/character.tscn" id="6_character"]
+[ext_resource type="PackedScene" uid="uid://bn7iee0lrmc1" path="res://scenes/fp_arm.tscn" id="7_fp_arm"]
+[ext_resource type="PackedScene" path="res://scenes/block_highlight.tscn" id="8_highlight"]
+[ext_resource type="PackedScene" uid="uid://dhh4xubsndg1q" path="res://scenes/hud.tscn" id="9_hud"]
+[ext_resource type="Texture2D" uid="uid://3bygmtfoqf6a" path="res://assets/generated/grass_top_frame_0.png" id="10_grass"]
+[ext_resource type="Texture2D" uid="uid://c68jqejpadxsx" path="res://assets/generated/wood_frame_0.png" id="11_wood"]
+[ext_resource type="Texture2D" uid="uid://co3fxxf1ehitk" path="res://assets/generated/leaves_frame_0.png" id="12_leaves"]
+[ext_resource type="Texture2D" uid="uid://5ybo7vdslnm1" path="res://assets/generated/sand_frame_0.png" id="13_sand"]
+[ext_resource type="Script" uid="uid://bkhsk2cy403ss" path="res://scripts/day_night_cycle.gd" id="14_daynight"]
+[ext_resource type="Script" path="res://scripts/chat_bridge.gd" id="23_chat"]
+[ext_resource type="PackedScene" path="res://scenes/help_bot.tscn" id="24_bob"]
+[ext_resource type="Script" path="res://scripts/village.gd" id="25_village"]
+[ext_resource type="PackedScene" path="res://scenes/villager.tscn" id="26_villager"]
+[ext_resource type="Script" path="res://scripts/save_manager.gd" id="27_save"]
+[ext_resource type="PackedScene" uid="uid://8sm2nh8v5aa6" path="res://scenes/debug_panel.tscn" id="15_debug"]
+[ext_resource type="Script" uid="uid://cfncaqp65mrhg" path="res://scripts/weather.gd" id="16_weather"]
+[ext_resource type="Script" uid="uid://bds2t7b87nq5n" path="res://scripts/chicken_spawner.gd" id="17_chicken_spawner"]
+[ext_resource type="Script" uid="uid://bq87ltlufqped" path="res://scripts/cow_spawner.gd" id="18_cow_spawner"]
+[ext_resource type="Script" uid="uid://bjv2byjawbsjl" path="res://scripts/passive_animal_spawner.gd" id="19_animal_spawner"]
+[ext_resource type="PackedScene" uid="uid://dode3332cm63r" path="res://scenes/pig.tscn" id="20_pig"]
+[ext_resource type="PackedScene" uid="uid://coskte270eebo" path="res://scenes/sheep.tscn" id="21_sheep"]
+[ext_resource type="PackedScene" uid="uid://b11mdlqik1vf1" path="res://scenes/cat.tscn" id="22_cat"]
+
+[sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_1"]
+sky_top_color = Color(0.06, 0.05, 0.22, 1)
+sky_horizon_color = Color(0.32, 0.26, 0.58, 1)
+ground_bottom_color = Color(0.14, 0.13, 0.28, 1)
+ground_horizon_color = Color(0.2, 0.18, 0.38, 1)
+ground_curve = 0.15
+
+[sub_resource type="Sky" id="Sky_1"]
+sky_material = SubResource("ProceduralSkyMaterial_1")
+
+[sub_resource type="Environment" id="Environment_1"]
+background_mode = 2
+sky = SubResource("Sky_1")
+ambient_light_source = 2
+ambient_light_color = Color(0.55, 0.62, 0.95, 1)
+ambient_light_sky_contribution = 0.35
+ambient_light_energy = 1.4
+tonemap_mode = 2
+glow_enabled = true
+glow_intensity = 0.55
+glow_bloom = 0.18
+fog_enabled = true
+fog_light_color = Color(0.42, 0.38, 0.78, 1)
+fog_light_energy = 1.1
+fog_sun_scatter = 0.15
+fog_density = 0.016
+fog_aerial_perspective = 0.5
+fog_sky_affect = 0.4
+
+[sub_resource type="CapsuleShape3D" id="CapsuleShape3D_1"]
+radius = 0.35
+height = 1.7
+
+[sub_resource type="ParticleProcessMaterial" id="Dust_Process"]
+emission_shape = 1
+emission_sphere_radius = 14.0
+direction = Vector3(0, 1, 0)
+spread = 65.0
+initial_velocity_min = 0.08
+initial_velocity_max = 0.22
+angular_velocity_min = -25.0
+angular_velocity_max = 25.0
+gravity = Vector3(0, 0.04, 0)
+linear_accel_min = -0.05
+linear_accel_max = 0.05
+damping_min = 0.05
+damping_max = 0.15
+scale_min = 0.5
+scale_max = 1.4
+color = Color(0.85, 0.85, 1, 1)
+
+[sub_resource type="StandardMaterial3D" id="Dust_Material"]
+transparency = 1
+shading_mode = 0
+albedo_color = Color(0.92, 0.88, 1, 0.95)
+disable_receive_shadows = true
+billboard_mode = 1
+billboard_keep_scale = true
+
+[sub_resource type="QuadMesh" id="Dust_Mesh"]
+material = SubResource("Dust_Material")
+size = Vector2(0.09, 0.09)
+
+[node name="Main" type="Node3D" unique_id=1588680951]
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="." unique_id=1399496693]
+environment = SubResource("Environment_1")
+
+[node name="Sun" type="DirectionalLight3D" parent="." unique_id=1684480624]
+transform = Transform3D(0.781, 0.461, -0.422, 0, 0.675, 0.738, 0.625, -0.576, 0.527, 0, 10, 0)
+light_color = Color(0.7, 0.78, 1, 1)
+light_energy = 0.55
+shadow_enabled = true
+shadow_blur = 2.5
+directional_shadow_mode = 1
+directional_shadow_max_distance = 64.0
+
+[node name="DayNightCycle" type="Node" parent="." unique_id=1982615491]
+script = ExtResource("14_daynight")
+sun_path = NodePath("../Sun")
+environment_path = NodePath("../WorldEnvironment")
+
+[node name="World" type="Node3D" parent="." unique_id=73265253]
+script = ExtResource("1_world")
+dirt_texture = ExtResource("3_dirt")
+grass_top_texture = ExtResource("10_grass")
+cobble_texture = ExtResource("4_cobble")
+wood_texture = ExtResource("11_wood")
+leaves_texture = ExtResource("12_leaves")
+sand_texture = ExtResource("13_sand")
+
+[node name="Player" type="CharacterBody3D" parent="." unique_id=33696559]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 30, 0)
+script = ExtResource("2_player")
+block_highlight_path = NodePath("../BlockHighlight")
+world_path = NodePath("../World")
+dirt_texture = ExtResource("3_dirt")
+grass_top_texture = ExtResource("10_grass")
+cobble_texture = ExtResource("4_cobble")
+wood_texture = ExtResource("11_wood")
+leaves_texture = ExtResource("12_leaves")
+sand_texture = ExtResource("13_sand")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Player" unique_id=1324417800]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.85, 0)
+shape = SubResource("CapsuleShape3D_1")
+
+[node name="Dust" type="GPUParticles3D" parent="Player" unique_id=999100100]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2, 0)
+amount = 110
+lifetime = 7.0
+randomness = 0.4
+visibility_aabb = AABB(-20, -10, -20, 40, 20, 40)
+process_material = SubResource("Dust_Process")
+draw_pass_1 = SubResource("Dust_Mesh")
+
+[node name="Character" parent="Player" unique_id=2076066953 instance=ExtResource("6_character")]
+
+[node name="CameraPivot" type="Node3D" parent="Player" unique_id=432209039]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.6, 0)
+
+[node name="Camera3D" type="Camera3D" parent="Player/CameraPivot" unique_id=274354986]
+current = true
+
+[node name="FPArm" parent="Player/CameraPivot/Camera3D" unique_id=372452877 instance=ExtResource("7_fp_arm")]
+transform = Transform3D(0.9903, 0, -0.1392, 0, 1, 0, 0.1392, 0, 0.9903, 0.32, -0.32, -0.35)
+
+[node name="Crosshair" parent="." unique_id=1064517706 instance=ExtResource("5_crosshair")]
+
+[node name="BlockHighlight" parent="." unique_id=1142377643 instance=ExtResource("8_highlight")]
+visible = false
+
+[node name="DebugPanel" parent="." unique_id=750857108 instance=ExtResource("15_debug")]
+
+[node name="Weather" type="Node3D" parent="." unique_id=662840379]
+script = ExtResource("16_weather")
+
+[node name="ChickenSpawner" type="Node3D" parent="." unique_id=1987592602]
+script = ExtResource("17_chicken_spawner")
+world_path = NodePath("../World")
+
+[node name="CowSpawner" type="Node3D" parent="." unique_id=1272669779]
+script = ExtResource("18_cow_spawner")
+world_path = NodePath("../World")
+
+[node name="PigSpawner" type="Node3D" parent="." unique_id=396097920]
+script = ExtResource("19_animal_spawner")
+world_path = NodePath("../World")
+animal_scene = ExtResource("20_pig")
+spawn_max_radius = 18
+
+[node name="SheepSpawner" type="Node3D" parent="." unique_id=1541393509]
+script = ExtResource("19_animal_spawner")
+world_path = NodePath("../World")
+animal_scene = ExtResource("21_sheep")
+spawn_min_radius = 10
+
+[node name="CatSpawner" type="Node3D" parent="." unique_id=1749778938]
+script = ExtResource("19_animal_spawner")
+world_path = NodePath("../World")
+animal_scene = ExtResource("22_cat")
+spawn_count = 2
+spawn_min_radius = 5
+spawn_max_radius = 14
+
+[node name="HUD" parent="." unique_id=444951439 instance=ExtResource("9_hud")]
+dirt_texture = ExtResource("3_dirt")
+grass_top_texture = ExtResource("10_grass")
+cobble_texture = ExtResource("4_cobble")
+wood_texture = ExtResource("11_wood")
+leaves_texture = ExtResource("12_leaves")
+sand_texture = ExtResource("13_sand")
+
+[node name="HelpBot" parent="." instance=ExtResource("24_bob")]
+
+[node name="ChatBridge" type="CanvasLayer" parent="."]
+script = ExtResource("23_chat")
+
+[node name="Village" type="Node3D" parent="."]
+script = ExtResource("25_village")
+world_path = NodePath("../World")
+villager_scene = ExtResource("26_villager")
+villagers_to_spawn = 3
+spawn_center = Vector3i(6, 0, 6)
+
+[node name="SaveManager" type="Node" parent="."]
+script = ExtResource("27_save")

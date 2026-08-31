@@ -1,0 +1,17 @@
+# Godot 4 — only the per-user cache goes ignored; .import and .uid are
+# committed so resources load with correct references.
+.godot/
+
+# Editor / OS
+*.tmp
+*.log
+Thumbs.db
+.DS_Store
+
+# Backups (never push versioned snapshots)
+*.v_2026*
+godot3_backup_*/
+
+# Python (bob_server.py deps)
+__pycache__/
+*.pyc

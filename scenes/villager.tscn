@@ -1,0 +1,94 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/villager.gd" id="1_villager"]
+
+[sub_resource type="BoxShape3D" id="VillagerCollider"]
+size = Vector3(0.6, 1.8, 0.6)
+
+[sub_resource type="StandardMaterial3D" id="RobeMat"]
+resource_local_to_scene = true
+albedo_color = Color(0.55, 0.4, 0.28, 1)
+roughness = 0.9
+
+[sub_resource type="StandardMaterial3D" id="SkinMat"]
+resource_local_to_scene = true
+albedo_color = Color(0.9, 0.75, 0.55, 1)
+roughness = 0.85
+
+[sub_resource type="StandardMaterial3D" id="HeadCoverMat"]
+resource_local_to_scene = true
+albedo_color = Color(0.45, 0.3, 0.2, 1)
+roughness = 0.9
+
+[sub_resource type="BoxMesh" id="TorsoMesh"]
+material = SubResource("RobeMat")
+size = Vector3(0.5, 0.7, 0.28)
+
+[sub_resource type="BoxMesh" id="ArmMesh"]
+material = SubResource("RobeMat")
+size = Vector3(0.18, 0.5, 0.18)
+
+[sub_resource type="BoxMesh" id="HeadMesh"]
+material = SubResource("SkinMat")
+size = Vector3(0.4, 0.4, 0.4)
+
+[sub_resource type="BoxMesh" id="HeadCoverMesh"]
+material = SubResource("HeadCoverMat")
+size = Vector3(0.42, 0.14, 0.42)
+
+[sub_resource type="BoxMesh" id="NoseMesh"]
+material = SubResource("SkinMat")
+size = Vector3(0.12, 0.14, 0.1)
+
+[sub_resource type="BoxMesh" id="LegMesh"]
+material = SubResource("RobeMat")
+size = Vector3(0.2, 0.5, 0.24)
+
+[node name="Villager" type="CharacterBody3D"]
+script = ExtResource("1_villager")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.9, 0)
+shape = SubResource("VillagerCollider")
+
+[node name="Model" type="Node3D" parent="."]
+
+[node name="Torso" type="MeshInstance3D" parent="Model"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.05, 0)
+mesh = SubResource("TorsoMesh")
+
+[node name="Head" type="MeshInstance3D" parent="Model"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.6, 0)
+mesh = SubResource("HeadMesh")
+
+[node name="HeadCover" type="MeshInstance3D" parent="Model"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.76, 0)
+mesh = SubResource("HeadCoverMesh")
+
+[node name="Nose" type="MeshInstance3D" parent="Model"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.58, -0.22)
+mesh = SubResource("NoseMesh")
+
+[node name="LeftArm" type="MeshInstance3D" parent="Model"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.34, 1.35, 0)
+mesh = SubResource("ArmMesh")
+
+[node name="RightArm" type="MeshInstance3D" parent="Model"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.34, 1.35, 0)
+mesh = SubResource("ArmMesh")
+
+[node name="FrontLeftLeg" type="MeshInstance3D" parent="Model"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.22, 0.45, -0.1)
+mesh = SubResource("LegMesh")
+
+[node name="FrontRightLeg" type="MeshInstance3D" parent="Model"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.22, 0.45, -0.1)
+mesh = SubResource("LegMesh")
+
+[node name="BackLeftLeg" type="MeshInstance3D" parent="Model"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.22, 0.45, 0.1)
+mesh = SubResource("LegMesh")
+
+[node name="BackRightLeg" type="MeshInstance3D" parent="Model"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.22, 0.45, 0.1)
+mesh = SubResource("LegMesh")
