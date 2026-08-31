@@ -11,13 +11,18 @@ This game was made just to see if I could do it. I made this from scratch — al
 ## Features
 - First-person (R toggles third-person) block mining & placing with mining-crack feedback
 - Procedural infinite world with real textures, biomes, trees, water, and day/night cycle
-- Passive animals, day/night cycle, weather
+- **Hostile mobs** that spawn at night and chase you — fight them off with your sword
+- Passive animals (cow, pig, sheep, chicken) that drop food when you hunt them
+- **Sound effects** (block break, hurt, water splash) and relaxing looping background music
 - Crafting (2×2 grid): wood → planks → crafting table, sticks, pickaxes, swords, axes, torches, iron armor
 - Tool speeds: a pickaxe/axe mines its matching blocks faster; higher tiers are faster
 - Combat: bare hands are weakest, swords scale by tier
 - **Bob the LLM helper bot** — follows your footsteps, helps you mine, sees through his own 90° camera, and obeys live in-game chat commands (`follow` / `guard` / `stay` / `mine that` / `help`). Powered by a local vision-capable model via `bob_server.py`.
 - NPC villagers with homes and jobs that go inside and lock their doors at night
 - Save/load: the world (your built/mined blocks, position, health) persists between sessions
+
+## Status
+**Beta** — a working, playable sandbox with mobs, sounds, crafting, and your LLM companion Bob. More content is on the way.
 
 ## Saving
 - **Autosave:** your world (blocks, position, health) is saved to `user://mindshaft_save.json` every 15 seconds automatically.
@@ -43,14 +48,6 @@ python bob_server.py
 - **Left-click** mine / attack · **Right-click** place / use
 - **1–9 / scroll** select hotbar slot · **E** inventory & crafting
 - **Enter** chat (talk to Bob) · **Esc** release mouse / menu
-
-## Missing / planned features (roadmap)
-MindShaft is early — here's what's **not** in yet:
-- **Hostile mobs / monsters** — only passive animals exist (cow, pig, sheep, chicken). No zombies, creepers, or combat mobs spawn yet.
-- **Sound effects** — no audio currently.
-- **Combat depth** — you can hit animals with tools/swords (tiered damage), but there are no monsters to fight and limited death/loot flow.
-
-These are the next things on the list.
 
 ## License & credits
 - Game code adapted from **Godotcraft** (MIT) — https://github.com/Godot-Templates/Godotcraft
