@@ -331,6 +331,25 @@ func _build_crafting_section() -> void:
     craft_row.add_child(output_wrap)
 
     craft_vbox.add_child(craft_row)
+
+    # Recipe list: show every recipe's ingredients and output (by display name).
+    var rec_label: Label = Label.new()
+    rec_label.text = "Recipes"
+    rec_label.add_theme_font_size_override("font_size", 13)
+    rec_label.add_theme_color_override("font_color", Color(0.08, 0.08, 0.08, 1))
+    craft_vbox.add_child(rec_label)
+
+    var rec_list: RichTextLabel = RichTextLabel.new()
+    rec_list.name = "RecipeList"
+    rec_list.fit_content = true
+    rec_list.scroll_active = true
+    rec_list.custom_minimum_size = Vector2(320, 120)
+    rec_list.add_theme_font_size_override("normal_font_size", 12)
+    rec_list.add_theme_color_override("default_color", Color(0.1, 0.1, 0.1, 1))
+    rec_list.bbcode_enabled = true
+    rec_list.text = _recipe_list_bb()
+    craft_vbox.add_child(rec_list)
+
     header.add_child(craft_vbox)
 
     inv_content.add_child(header)
@@ -609,6 +628,27 @@ func _recipe_output(shape: Array) -> Dictionary:
             if met:
                 return recipe.output
     return {"type": "", "count": 0}
+
+
+func _recipe_list_bb() -> String:
+    var lines: PackedStringArray = PackedStringArray()
+    for recipe in RECIPES:
+        var out: Dictionary = recipe.output
+        var out_name: String = ITEM_NAMES.get(out.type, out.type)
+        if recipe.has("shape"):
+            # Shaped: combine the 4-slot pattern into a compact ingredient name.
+            var parts: PackedStringArray = PackedStringArray()
+            for t in recipe.shape:
+                if parts.has(t) == false and t != "":
+                    parts.append(ITEM_NAMES.get(t, t))
+            lines.append("[b]%s[/b]  ←  %s" % [out_name, " + ".join(parts)])
+        else:
+            var needs: Dictionary = recipe.needs
+            var parts: PackedStringArray = PackedStringArray()
+            for req in needs:
+                parts.append("%s x%d" % [ITEM_NAMES.get(req, req), needs[req]])
+            lines.append("[b]%s[/b] x%d  ←  %s" % [out_name, out.count, " + ".join(parts)])
+    return "\n".join(lines)
 
 
 func _take_output() -> void:
