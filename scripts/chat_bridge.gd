@@ -26,6 +26,9 @@ var bob_target: Vector3 = Vector3.ZERO
 
 func _ready() -> void:
 	add_to_group("chat_bridge")
+	# Fully integrate Bob: auto-launch his LLM brain server (windowless) if it
+	# isn't already running, and auto-kill it when the game closes.
+	_ensure_bob_server()
 	# Build the chat UI in code (kept simple, no extra scene file).
 	# Backdrop dim + top-left log + bottom input.
 	var root := Control.new()
@@ -209,3 +212,23 @@ func _ask_bob_llm(msg: String) -> void:
 			_add_log("Bob: ...")
 		http.queue_free()
 	)
+
+
+## Auto-launch Bob's LLM brain server (bob_server.py) windowless if it isn't
+## already running, so Bob is always available without starting it manually.
+func _ensure_bob_server() -> void:
+	# If the server is already up, nothing to do.
+	var probe := HTTPRequest.new()
+	add_child(probe)
+	probe.timeout = 2.0
+	var err := probe.request("http://127.0.0.1:8642/")
+	if err == OK:
+		probe.request_completed.connect(func(_r, _c, _h, _b) -> void:
+			probe.queue_free()
+		)
+		return
+	# Not running — launch it windowless (pythonw, no console window).
+	var script_path := ProjectSettings.globalize_path("res://bob_server.py")
+	var cmd := "pythonw \"" + script_path + "\""
+	OS.create_process("cmd.exe", ["/c", "start", "", "/b", cmd])
+	probe.queue_free()
